@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build outputs — KHÔNG commit vào git
+dist/
+release/
+
+# Electron build outputs
+C:/builds/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+*.suo
+*.user
+
+# OS
+.DS_Store
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo

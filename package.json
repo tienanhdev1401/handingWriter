@@ -1,0 +1,73 @@
+{
+  "name": "tao-gif-chu-han",
+  "productName": "Tao GIF Chu Han",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Tạo GIF động thứ tự nét chữ Hán từ dữ liệu chuẩn Make Me a Hanzi",
+  "author": "Hanzi Writer",
+  "license": "MIT",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "electron:dev": "electron electron/main.cjs",
+    "dist:win": "npm run build && electron-builder --win --x64",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist": "npm run build && electron-builder --win --mac"
+  },
+  "dependencies": {
+    "gifenc": "^1.0.3",
+    "jszip": "^3.10.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "autoprefixer": "^10.5.4",
+    "electron": "^41.7.1",
+    "electron-builder": "^26.15.3",
+    "oxlint": "^1.71.0",
+    "postcss": "^8.5.22",
+    "tailwindcss": "^3.4.19",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.1"
+  },
+  "build": {
+    "appId": "com.hanzi.gif-generator",
+    "productName": "Tao GIF Chu Han",
+    "copyright": "MIT",
+    "directories": {
+      "output": "C:/builds",
+      "buildResources": "electron/assets"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/main.cjs"
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "runAfterFinish": true
+    },
+    "mac": {
+      "target": [
+        { "target": "dmg", "arch": ["x64", "arm64"] }
+      ],
+      "category": "public.app-category.education"
+    },
+    "dmg": {
+      "title": "Tao GIF Chu Han"
+    }
+  }
+}
