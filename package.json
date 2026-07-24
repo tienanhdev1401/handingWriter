@@ -14,7 +14,7 @@
     "preview": "vite preview",
     "electron:dev": "electron electron/main.cjs",
     "dist:win": "npm run build && electron-builder --win --x64",
-    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:mac": "npm run build && electron-builder --mac dir",
     "dist": "npm run build && electron-builder --win --mac"
   },
   "dependencies": {
@@ -51,7 +51,12 @@
     ],
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     },
     "nsis": {
@@ -62,12 +67,19 @@
     },
     "mac": {
       "target": [
-        { "target": "dmg", "arch": ["x64", "arm64"] }
+        {
+          "target": "dir",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ],
-      "category": "public.app-category.education"
+      "category": "public.app-category.education",
+      "identity": null
     },
     "dmg": {
-      "title": "Tao GIF Chu Han"
+      "title": "TaoGIFChuHan"
     }
   }
 }
