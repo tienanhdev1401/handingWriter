@@ -1,16 +1,15 @@
 'use strict';
 
-const { app, BrowserWindow, protocol, net, dialog } = require('electron');
+const { app, BrowserWindow, protocol, net, dialog, ipcMain, shell, Menu } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const { pathToFileURL } = require('url');
 
 // ── Auto-updater (chỉ dùng trong production) ──────────────────────────────────
-// Lazy-require để tránh lỗi khi chạy dev
 let autoUpdater = null;
 if (app.isPackaged) {
   try {
     autoUpdater = require('electron-updater').autoUpdater;
-    // Tắt log ra console để không làm phiền
     autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;
   } catch (e) {
@@ -18,7 +17,28 @@ if (app.isPackaged) {
   }
 }
 
-// ── Custom protocol để serve file tĩnh trong production ──────────────────────
+// ── Đọc/ghi config (lưu vào userData của user) ───────────────────────────────
+function getConfigPath() {
+  return path.join(app.getPath('userData'), 'config.json');
+}
+
+function loadConfig() {
+  try {
+    return JSON.parse(fs.readFileSync(getConfigPath(), 'utf-8'));
+  } catch {
+    return {};
+  }
+}
+
+function saveConfig(config) {
+  try {
+    fs.writeFileSync(getConfigPath(), JSON.stringify(config, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('[config] Không thể lưu config:', e.message);
+  }
+}
+
+// ── Custom app:// protocol ────────────────────────────────────────────────────
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'app',
@@ -32,7 +52,6 @@ protocol.registerSchemesAsPrivileged([
   },
 ]);
 
-// ── Biến lưu window chính để dùng trong updater events ───────────────────────
 let mainWindow = null;
 
 // ── Create window ─────────────────────────────────────────────────────────────
@@ -45,6 +64,8 @@ function createWindow() {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      // Preload: bridge an toàn giữa renderer và main
+      preload: path.join(__dirname, 'preload.cjs'),
     },
     title: 'Tạo GIF Nét Chữ Hán',
     backgroundColor: '#0c0c0c',
@@ -60,13 +81,110 @@ function createWindow() {
 
   mainWindow.once('ready-to-show', () => mainWindow.show());
   mainWindow.on('closed', () => { mainWindow = null; });
+
+  // ── Context menu (chuột phải) trên mọi editable element ──────────────────
+  mainWindow.webContents.on('context-menu', (_event, params) => {
+    // Chỉ hiện khi click vào ô có thể chỉnh sửa hoặc có text được chọn
+    if (!params.isEditable && !params.selectionText) return;
+
+    const menu = Menu.buildFromTemplate([
+      {
+        label: 'Cắt',
+        role: 'cut',
+        enabled: params.editFlags.canCut,
+      },
+      {
+        label: 'Sao chép',
+        role: 'copy',
+        enabled: params.editFlags.canCopy,
+      },
+      {
+        label: 'Dán',
+        role: 'paste',
+        enabled: params.editFlags.canPaste,
+      },
+      { type: 'separator' },
+      {
+        label: 'Chọn tất cả',
+        role: 'selectAll',
+      },
+    ]);
+    menu.popup({ window: mainWindow });
+  });
 }
 
-// ── Setup auto-updater events ─────────────────────────────────────────────────
+// ── IPC Handlers ──────────────────────────────────────────────────────────────
+
+// Trả về thư mục đang được lưu (hoặc null nếu chưa chọn)
+ipcMain.handle('get-save-folder', () => {
+  const config = loadConfig();
+  // Kiểm tra folder vẫn còn tồn tại
+  if (config.saveFolder && fs.existsSync(config.saveFolder)) {
+    return config.saveFolder;
+  }
+  return null;
+});
+
+// Mở dialog chọn thư mục và lưu vào config
+ipcMain.handle('select-save-folder', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory', 'createDirectory'],
+    title: 'Chọn thư mục lưu GIF',
+    buttonLabel: 'Chọn thư mục này',
+  });
+
+  if (!result.canceled && result.filePaths.length > 0) {
+    const folder = result.filePaths[0];
+    const config = loadConfig();
+    config.saveFolder = folder;
+    saveConfig(config);
+    return folder;
+  }
+  return null; // User bấm Cancel
+});
+
+// Xóa thư mục đã lưu (reset về mặc định)
+ipcMain.handle('clear-save-folder', () => {
+  const config = loadConfig();
+  delete config.saveFolder;
+  saveConfig(config);
+  return true;
+});
+
+// Lưu file GIF ra disk vào thư mục đã chọn
+ipcMain.handle('save-gif-file', async (_event, filename, dataArray) => {
+  const config = loadConfig();
+  const folder = config.saveFolder;
+
+  if (!folder) {
+    return { success: false, error: 'Chưa chọn thư mục lưu' };
+  }
+
+  if (!fs.existsSync(folder)) {
+    // Thư mục đã bị xóa — reset config
+    delete config.saveFolder;
+    saveConfig(config);
+    return { success: false, error: 'Thư mục không còn tồn tại' };
+  }
+
+  try {
+    const filePath = path.join(folder, filename);
+    fs.writeFileSync(filePath, Buffer.from(dataArray));
+    return { success: true, filePath };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+// Mở Finder/Explorer và highlight file vừa lưu
+ipcMain.handle('show-in-folder', (_event, filePath) => {
+  shell.showItemInFolder(filePath);
+});
+
+// ── Setup auto-updater ────────────────────────────────────────────────────────
 function setupUpdater() {
   if (!autoUpdater) return;
 
-  // Tìm thấy bản mới → đang tải về tự động
   autoUpdater.on('update-available', (info) => {
     dialog.showMessageBox(mainWindow, {
       type: 'info',
@@ -77,7 +195,6 @@ function setupUpdater() {
     });
   });
 
-  // Tải xong → hỏi có muốn khởi động lại không
   autoUpdater.on('update-downloaded', (info) => {
     dialog.showMessageBox(mainWindow, {
       type: 'question',
@@ -94,12 +211,10 @@ function setupUpdater() {
     });
   });
 
-  // Lỗi update → im lặng, không làm phiền user
   autoUpdater.on('error', (err) => {
     console.error('[updater] Lỗi:', err.message);
   });
 
-  // Kiểm tra update sau 3 giây để tránh làm chậm startup
   setTimeout(() => {
     autoUpdater.checkForUpdates().catch((err) => {
       console.warn('[updater] Không thể kiểm tra update:', err.message);
@@ -109,7 +224,6 @@ function setupUpdater() {
 
 // ── App lifecycle ─────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
-  // Register app:// → serve dist/ files
   protocol.handle('app', (request) => {
     const url = new URL(request.url);
     let pathname = decodeURIComponent(url.pathname);

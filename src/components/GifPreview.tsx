@@ -1,10 +1,12 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import type { GifResult } from '../types';
 
 interface GifPreviewProps {
   result: GifResult;
   index: number;
   onRemove: (index: number) => void;
+  saveFolder: string | null;
+  onRequestSelectFolder: () => Promise<string | null>;
 }
 
 const statusLabel: Record<GifResult['status'], string> = {
@@ -14,9 +16,52 @@ const statusLabel: Record<GifResult['status'], string> = {
   error: 'Lỗi',
 };
 
-const GifPreview = memo(function GifPreview({ result, index, onRemove }: GifPreviewProps) {
-  const handleDownload = () => {
+const GifPreview = memo(function GifPreview({
+  result,
+  index,
+  onRemove,
+  saveFolder,
+  onRequestSelectFolder,
+}: GifPreviewProps) {
+  const [saving, setSaving] = useState(false);
+  const [savedPath, setSavedPath] = useState<string | null>(null);
+
+  const handleDownload = async () => {
     if (!result.url) return;
+
+    // ── Electron: lưu trực tiếp ra disk ──────────────────────────────────
+    if (window.electronAPI) {
+      setSaving(true);
+      try {
+        // Lấy thư mục lưu (hoặc hỏi chọn lần đầu)
+        let folder = saveFolder;
+        if (!folder) {
+          folder = await onRequestSelectFolder();
+          if (!folder) return; // User bấm Cancel
+        }
+
+        // Convert blob URL → Uint8Array
+        const response = await fetch(result.url);
+        const buffer = await response.arrayBuffer();
+        const res = await window.electronAPI.saveGifFile(
+          `${result.character}.gif`,
+          new Uint8Array(buffer)
+        );
+
+        if (res.success && res.filePath) {
+          setSavedPath(res.filePath);
+          // Highlight file trong Finder/Explorer
+          await window.electronAPI.showInFolder(res.filePath);
+        } else {
+          console.error('Save failed:', res.error);
+        }
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
+    // ── Browser fallback: dùng <a> download ──────────────────────────────
     const a = document.createElement('a');
     a.href = result.url;
     a.download = `${result.character}.gif`;
@@ -42,11 +87,11 @@ const GifPreview = memo(function GifPreview({ result, index, onRemove }: GifPrev
       <div className="flex items-center justify-between px-3 pt-2.5 pb-1.5">
         <span className="font-hanzi text-2xl leading-none text-text">{result.character}</span>
         <span className={`text-[10px] font-medium ${
-          result.status === 'success' ? 'text-emerald-500' :
-          result.status === 'error'   ? 'text-accent' :
+          result.status === 'success'    ? 'text-emerald-500' :
+          result.status === 'error'      ? 'text-accent' :
           result.status === 'processing' ? 'text-blue-400' : 'text-subtle'
         }`}>
-          {statusLabel[result.status]}
+          {savedPath ? '✓ Đã lưu' : statusLabel[result.status]}
         </span>
       </div>
 
@@ -70,17 +115,19 @@ const GifPreview = memo(function GifPreview({ result, index, onRemove }: GifPrev
         )}
       </div>
 
-      {/* Download */}
+      {/* Download / Save button */}
       {result.status === 'success' && (
         <button
           id={`download-${index}`}
           onClick={handleDownload}
+          disabled={saving}
           className="
             mx-2.5 mb-2.5 py-1.5 rounded-lg text-xs font-medium
             bg-accent hover:bg-accent-h text-white transition-colors
+            disabled:opacity-60
           "
         >
-          Tải về
+          {saving ? 'Đang lưu…' : savedPath ? 'Lưu lại' : 'Tải về'}
         </button>
       )}
     </div>

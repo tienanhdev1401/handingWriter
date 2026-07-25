@@ -33,6 +33,7 @@ export default function Home() {
   const [datasetStatus, setDatasetStatus] = useState<DatasetStatus>('idle');
   const [datasetCount, setDatasetCount] = useState(0);
   const [error, setError] = useState('');
+  const [saveFolder, setSaveFolder] = useState<string | null>(null);
 
   const { results, isGenerating, progress, generate, cancel, clearResults, removeResult } =
     useGifGenerator();
@@ -42,9 +43,29 @@ export default function Home() {
     preloadDataset()
       .then((n) => { setDatasetCount(n); setDatasetStatus('ready'); })
       .catch(() => setDatasetStatus('error'));
+
+    // Khôi phục thư mục lưu đã chọn trước đó (chỉ trong Electron)
+    if (window.electronAPI) {
+      window.electronAPI.getSaveFolder().then(setSaveFolder);
+    }
   }, []);
 
   const charList = extractChineseChars(inputText);
+
+  // Chọn thư mục lưu mới
+  const handleSelectFolder = useCallback(async (): Promise<string | null> => {
+    if (!window.electronAPI) return null;
+    const folder = await window.electronAPI.selectSaveFolder();
+    if (folder) setSaveFolder(folder);
+    return folder;
+  }, []);
+
+  // Xóa thư mục đã chọn
+  const handleClearFolder = useCallback(async () => {
+    if (!window.electronAPI) return;
+    await window.electronAPI.clearSaveFolder();
+    setSaveFolder(null);
+  }, []);
 
   const handleGenerate = useCallback(async () => {
     setError('');
@@ -169,6 +190,43 @@ export default function Home() {
         {/* ── Advanced Options (collapsible) ─────────────────────────────── */}
         <OptionsPanel options={options} onChange={setOptions} disabled={isGenerating} />
 
+        {/* ── Save Folder (chỉ hiển thị trong Electron) ───────────────────── */}
+        {window.electronAPI && (
+          <div className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-surface border border-border">
+            <div className="flex items-center gap-2 min-w-0">
+              <svg className="w-3.5 h-3.5 text-subtle flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                  d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+              </svg>
+              {saveFolder ? (
+                <span className="text-xs text-muted truncate" title={saveFolder}>
+                  {saveFolder.split(/[\\/]/).pop()}
+                </span>
+              ) : (
+                <span className="text-xs text-subtle italic">Chưa chọn thư mục lưu</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                type="button"
+                onClick={handleSelectFolder}
+                className="text-xs text-muted hover:text-text transition-colors"
+              >
+                {saveFolder ? 'Thay đổi' : 'Chọn thư mục'}
+              </button>
+              {saveFolder && (
+                <button
+                  type="button"
+                  onClick={handleClearFolder}
+                  className="text-xs text-subtle hover:text-accent transition-colors"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* ── Actions ────────────────────────────────────────────────────── */}
         <div className="flex gap-2">
           {!isGenerating ? (
@@ -251,7 +309,14 @@ export default function Home() {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {results.map((r, i) => (
-                <GifPreview key={`${r.character}-${i}`} result={r} index={i} onRemove={removeResult} />
+                <GifPreview
+                  key={`${r.character}-${i}`}
+                  result={r}
+                  index={i}
+                  onRemove={removeResult}
+                  saveFolder={saveFolder}
+                  onRequestSelectFolder={handleSelectFolder}
+                />
               ))}
             </div>
           </section>
