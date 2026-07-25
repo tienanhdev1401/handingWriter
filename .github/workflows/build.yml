@@ -6,6 +6,9 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -23,17 +26,10 @@ jobs:
       - name: Build React app
         run: npm run build
 
-      - name: Package Windows installer
-        run: npx electron-builder --win --x64
+      - name: Package and publish Windows installer
+        run: npx electron-builder --win --x64 --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Windows artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-installer
-          path: C:/builds/*.exe
-          retention-days: 30
 
   build-macos:
     runs-on: macos-latest
@@ -51,14 +47,7 @@ jobs:
       - name: Build React app
         run: npm run build
 
-      - name: Package macOS app
-        run: npx electron-builder --mac --x64 --arm64
+      - name: Package and publish macOS app
+        run: npx electron-builder --mac --x64 --arm64 --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload macOS artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-dmg
-          path: C:/builds/*.dmg
-          retention-days: 30

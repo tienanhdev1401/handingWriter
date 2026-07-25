@@ -13,11 +13,13 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "electron:dev": "electron electron/main.cjs",
-    "dist:win": "npm run build && electron-builder --win --x64",
-    "dist:mac": "npm run build && electron-builder --mac dir",
-    "dist": "npm run build && electron-builder --win --mac"
+    "dist:win": "npm run build && electron-builder --win --x64 --publish never",
+    "dist:mac": "npm run build && electron-builder --mac --publish never",
+    "release:win": "npm run build && electron-builder --win --x64 --publish always",
+    "release:mac": "npm run build && electron-builder --mac --publish always"
   },
   "dependencies": {
+    "electron-updater": "^6.8.9",
     "gifenc": "^1.0.3",
     "jszip": "^3.10.1",
     "react": "^19.2.7",
@@ -42,9 +44,16 @@
     "productName": "Tao GIF Chu Han",
     "copyright": "MIT",
     "directories": {
-      "output": "C:/builds",
+      "output": "release",
       "buildResources": "electron/assets"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "tienanhdev1401",
+        "repo": "handingWriter"
+      }
+    ],
     "files": [
       "dist/**/*",
       "electron/main.cjs"
@@ -68,11 +77,8 @@
     "mac": {
       "target": [
         {
-          "target": "dir",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
         }
       ],
       "category": "public.app-category.education",
