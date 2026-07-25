@@ -2,7 +2,7 @@
   "name": "tao-gif-chu-han",
   "productName": "Tao GIF Chu Han",
   "private": true,
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Tạo GIF động thứ tự nét chữ Hán từ dữ liệu chuẩn Make Me a Hanzi",
   "author": "Hanzi Writer",
   "license": "MIT",

@@ -12,6 +12,12 @@ if (app.isPackaged) {
     autoUpdater = require('electron-updater').autoUpdater;
     autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;
+    // Khai báo trực tiếp repository GitHub để chắc chắn luôn tìm đúng bản phát hành
+    autoUpdater.setFeedURL({
+      provider: 'github',
+      owner: 'tienanhdev1401',
+      repo: 'handingWriter'
+    });
   } catch (e) {
     console.warn('[updater] electron-updater không khả dụng:', e.message);
   }
