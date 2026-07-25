@@ -82,6 +82,7 @@
     },
     "mac": {
       "icon": "electron/assets/icon.png",
+      "artifactName": "Tao-GIF-Chu-Han-mac.${ext}",
       "target": [
         {
           "target": "zip",
@@ -92,9 +93,6 @@
       ],
       "category": "public.app-category.education",
       "identity": null
-    },
-    "zip": {
-      "artifactName": "Tao-GIF-Chu-Han-mac.${ext}"
     }
   }
 }
