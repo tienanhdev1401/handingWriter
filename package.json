@@ -2,7 +2,7 @@
   "name": "tao-gif-chu-han",
   "productName": "Tao GIF Chu Han",
   "private": true,
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Tạo GIF động thứ tự nét chữ Hán từ dữ liệu chuẩn Make Me a Hanzi",
   "author": "Hanzi Writer",
   "license": "MIT",
@@ -33,7 +33,9 @@
     "autoprefixer": "^10.5.4",
     "electron": "^41.7.1",
     "electron-builder": "^26.15.3",
+    "jimp": "^1.6.1",
     "oxlint": "^1.71.0",
+    "png-to-ico": "^3.0.2",
     "postcss": "^8.5.22",
     "tailwindcss": "^3.4.19",
     "typescript": "~6.0.2",
@@ -61,6 +63,7 @@
       "electron/preload.cjs"
     ],
     "win": {
+      "icon": "electron/assets/icon.ico",
       "target": [
         {
           "target": "nsis",
@@ -77,10 +80,14 @@
       "runAfterFinish": true
     },
     "mac": {
+      "icon": "electron/assets/icon.png",
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "category": "public.app-category.education",
