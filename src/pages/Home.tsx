@@ -98,7 +98,7 @@ export default function Home() {
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <header>
           <h1 className="text-2xl font-semibold tracking-tight text-text mb-1">
-            Tạo GIF nét chữ Hán
+            Tạo GIF từ chữ Hán
           </h1>
           <p className="text-muted text-sm">
             {datasetStatus === 'ready' && `${datasetCount.toLocaleString()} ký tự · Offline`}
