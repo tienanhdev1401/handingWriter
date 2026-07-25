@@ -74,6 +74,7 @@
       ]
     },
     "nsis": {
+      "artifactName": "Tao-GIF-Chu-Han-Setup.${ext}",
       "oneClick": true,
       "perMachine": false,
       "createDesktopShortcut": true,
@@ -83,25 +84,17 @@
       "icon": "electron/assets/icon.png",
       "target": [
         {
-          "target": "dmg",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        },
-        {
           "target": "zip",
           "arch": [
-            "x64",
-            "arm64"
+            "universal"
           ]
         }
       ],
       "category": "public.app-category.education",
       "identity": null
     },
-    "dmg": {
-      "title": "TaoGIFChuHan"
+    "zip": {
+      "artifactName": "Tao-GIF-Chu-Han-mac.${ext}"
     }
   }
 }
