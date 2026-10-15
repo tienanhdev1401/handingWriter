@@ -10,8 +10,12 @@ let autoUpdater = null;
 if (app.isPackaged) {
   try {
     autoUpdater = require('electron-updater').autoUpdater;
-    autoUpdater.autoDownload = true;
-    autoUpdater.autoInstallOnAppQuit = true;
+    // Squirrel.Mac requires a signed app to apply an update. Keep the Windows
+    // experience automatic, but let unsigned internal macOS builds update
+    // manually from the release page instead of entering an install loop.
+    const isMac = process.platform === 'darwin';
+    autoUpdater.autoDownload = !isMac;
+    autoUpdater.autoInstallOnAppQuit = !isMac;
     // Khai báo trực tiếp repository GitHub để chắc chắn luôn tìm đúng bản phát hành
     autoUpdater.setFeedURL({
       provider: 'github',
@@ -192,6 +196,23 @@ function setupUpdater() {
   if (!autoUpdater) return;
 
   autoUpdater.on('update-available', (info) => {
+    if (process.platform === 'darwin') {
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'Có bản cập nhật mới',
+        message: `Phiên bản ${info.version} đã có sẵn.`,
+        detail: 'Bản macOS nội bộ chưa được ký nên không thể tự cài. Hãy tải ZIP mới và thay thế ứng dụng hiện tại.',
+        buttons: ['Mở trang tải', 'Để sau'],
+        defaultId: 0,
+        cancelId: 1,
+      }).then((result) => {
+        if (result.response === 0) {
+          shell.openExternal('https://github.com/tienanhdev1401/handingWriter/releases/latest');
+        }
+      });
+      return;
+    }
+
     dialog.showMessageBox(mainWindow, {
       type: 'info',
       title: 'Có bản cập nhật mới',
