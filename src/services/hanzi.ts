@@ -104,3 +104,19 @@ export async function filterValidCharacters(
 
   return { valid, invalid };
 }
+
+let s2tCache: Record<string, string> | null = null;
+
+/**
+ * Chuyển danh sách ký tự giản thể sang phồn thể (bảng public/data/s2t.json).
+ * Ký tự không có trong bảng giữ nguyên; kết quả đã loại trùng.
+ */
+export async function toTraditional(chars: string[]): Promise<string[]> {
+  if (!s2tCache) {
+    const res = await fetch('/data/s2t.json');
+    if (!res.ok) throw new Error(`Không thể tải bảng phồn thể: ${res.status}`);
+    s2tCache = (await res.json()) as Record<string, string>;
+  }
+  const map = s2tCache;
+  return [...new Set(chars.map((c) => map[c] ?? c))];
+}

@@ -130,28 +130,41 @@ interface Point2D {
   y: number;
 }
 
-function interpolateMedian(medians: number[][], progress: number): Point2D[] {
+/** Tổng độ dài đường median (đơn vị tọa độ Make Me a Hanzi). */
+export function medianLength(medians: number[][]): number {
+  let length = 0;
+  for (let i = 1; i < medians.length; i++) {
+    length += Math.hypot(medians[i][0] - medians[i - 1][0], medians[i][1] - medians[i - 1][1]);
+  }
+  return length;
+}
+
+/**
+ * Cắt median tại `progress` theo ĐỘ DÀI CUNG (arc length), không theo chỉ số điểm.
+ * Các điểm median cách nhau không đều, nên nội suy theo chỉ số làm đầu bút
+ * lúc nhanh lúc chậm giữa các frame (khựng). Theo độ dài cung thì tốc độ đều.
+ */
+export function interpolateMedian(medians: number[][], progress: number): Point2D[] {
   if (medians.length === 0) return [];
   if (progress >= 1) return medians.map(([x, y]) => ({ x, y }));
   if (progress <= 0) return [{ x: medians[0][0], y: medians[0][1] }];
 
-  const totalSegments = medians.length - 1;
-  const floatPos = progress * totalSegments;
-  const segIndex = Math.min(Math.floor(floatPos), totalSegments - 1);
-  const segFrac = floatPos - segIndex;
+  const target = progress * medianLength(medians);
+  const pts: Point2D[] = [{ x: medians[0][0], y: medians[0][1] }];
+  let walked = 0;
 
-  const pts: Point2D[] = medians
-    .slice(0, segIndex + 1)
-    .map(([x, y]) => ({ x, y }));
-
-  // Add the interpolated point at the current stroke tip
-  const p0 = medians[segIndex];
-  const p1 = medians[segIndex + 1] ?? medians[segIndex];
-  pts.push({
-    x: p0[0] + (p1[0] - p0[0]) * segFrac,
-    y: p0[1] + (p1[1] - p0[1]) * segFrac,
-  });
-
+  for (let i = 1; i < medians.length; i++) {
+    const [x0, y0] = medians[i - 1];
+    const [x1, y1] = medians[i];
+    const seg = Math.hypot(x1 - x0, y1 - y0);
+    if (walked + seg >= target) {
+      const t = seg > 0 ? (target - walked) / seg : 1;
+      pts.push({ x: x0 + (x1 - x0) * t, y: y0 + (y1 - y0) * t });
+      return pts;
+    }
+    walked += seg;
+    pts.push({ x: x1, y: y1 });
+  }
   return pts;
 }
 
@@ -390,16 +403,20 @@ export function generateCharacterFrames(
   capture(500); // 500ms initial pause
 
   // ② Animate each stroke
-  const framesPerStroke = Math.max(4, Math.min(30, strokeSpeed));
+  // strokeSpeed = số frame cho một nét dài trung bình (~300 đơn vị); nét dài hơn
+  // được nhiều frame hơn để tốc độ bút đều giữa các nét thay vì nét dài bị "nhảy".
+  const speed = Math.max(4, Math.min(30, strokeSpeed));
+  const easeInOut = (p: number) => (p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2);
 
   for (let strokeIdx = 0; strokeIdx < data.strokes.length; strokeIdx++) {
     const medians = data.medians[strokeIdx] as number[][];
     const hasMedians = medians && medians.length >= 2;
 
     if (hasMedians) {
+      const framesPerStroke = Math.max(3, Math.min(30, Math.round((speed * medianLength(medians)) / 300)));
       // Animate the stroke progressively
       for (let f = 1; f <= framesPerStroke; f++) {
-        const progress = f / framesPerStroke;
+        const progress = easeInOut(f / framesPerStroke);
         renderFrame(
           canvas,
           data,

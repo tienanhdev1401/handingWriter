@@ -15,6 +15,7 @@ Dữ liệu nét lấy từ dataset chính thức [Make Me a Hanzi](https://gith
 | 🎬 GIF động | Hiển thị từng nét theo đúng thứ tự chuẩn |
 | 📦 Offline | Dữ liệu 9.574 ký tự được bundle sẵn (không cần Internet) |
 | 🎨 Tùy chỉnh | Màu nét, màu phác thảo, tốc độ, kích thước |
+| 繁 Phồn thể | Bật "Phồn thể" để tự chuyển giản thể → phồn thể (bảng OpenCC, 1.947 cặp) trước khi tạo GIF |
 | 📐 Nhiều kích thước | 256 / 512 / 1024 px |
 | 💾 Tải về | Từng file GIF hoặc gộp tất cả vào ZIP |
 | 🔁 Lặp vô hạn | Tùy chọn bật/tắt loop |
@@ -69,7 +70,8 @@ npm run preview
 handingWriter/
 ├── public/
 │   └── data/
-│       └── graphics.txt          # Make Me a Hanzi dataset (~30MB, 9574 ký tự)
+│       ├── graphics.txt          # Make Me a Hanzi dataset (~30MB, 9574 ký tự)
+│       └── s2t.json              # Bảng giản thể → phồn thể (sinh bởi scripts/build-s2t.mjs)
 ├── src/
 │   ├── types/
 │   │   ├── index.ts              # TypeScript interfaces cho toàn app
@@ -185,4 +187,5 @@ Blob URL → GifPreview card
 ## 📄 License & Nguồn Dữ Liệu
 
 - Dữ liệu nét: [Make Me a Hanzi](https://github.com/skishore/makemeahanzi) — GPLv3
+- Bảng giản/phồn: [OpenCC](https://github.com/BYVoid/OpenCC) `STCharacters.txt` — Apache-2.0
 - Ứng dụng này: MIT

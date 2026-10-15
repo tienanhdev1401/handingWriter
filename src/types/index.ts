@@ -27,6 +27,7 @@ export interface GenerationOptions {
   showStrokeNumbers: boolean;
   showOutline: boolean;
   transparentBackground: boolean;
+  traditional: boolean; // chuyển giản thể → phồn thể trước khi tạo
 }
 
 // A single captured animation frame
@@ -57,4 +58,5 @@ export const DEFAULT_OPTIONS: GenerationOptions = {
   showStrokeNumbers: true,
   showOutline: true,
   transparentBackground: false,
+  traditional: false,
 };

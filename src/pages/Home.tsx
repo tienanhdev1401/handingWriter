@@ -3,7 +3,7 @@ import JSZip from 'jszip';
 import type { GenerationOptions } from '../types';
 import { DEFAULT_OPTIONS } from '../types';
 import { useGifGenerator } from '../hooks/useGifGenerator';
-import { preloadDataset } from '../services/hanzi';
+import { preloadDataset, toTraditional } from '../services/hanzi';
 import GifPreview from '../components/GifPreview';
 import OptionsPanel from '../components/OptionsPanel';
 
@@ -73,7 +73,8 @@ export default function Home() {
     if (charList.length === 0) { setError('Không phát hiện chữ Hán hợp lệ.'); return; }
     if (charList.length > 200) { setError('Tối đa 200 ký tự mỗi lần.'); return; }
     clearResults();
-    await generate(charList, options);
+    const chars = options.traditional ? await toTraditional(charList) : charList;
+    await generate(chars, options);
   }, [inputText, charList, options, generate, clearResults]);
 
   const handleDownloadZip = useCallback(async () => {
@@ -162,29 +163,32 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Stroke numbers toggle */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted">Số nét</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={options.showStrokeNumbers}
-              disabled={isGenerating}
-              onClick={() => setOptions((o) => ({ ...o, showStrokeNumbers: !o.showStrokeNumbers }))}
-              className={`
-                relative w-8 h-4.5 rounded-full transition-colors
-                ${options.showStrokeNumbers ? 'bg-accent' : 'bg-surface-2 border border-border'}
-                disabled:opacity-40
-              `}
-              style={{ height: '18px' }}
-            >
-              <span className={`
-                absolute top-0.5 w-3.5 h-3.5 bg-white rounded-full shadow-sm
-                transition-transform duration-150
-                ${options.showStrokeNumbers ? 'left-[calc(100%-15px)]' : 'left-0.5'}
-              `} />
-            </button>
-          </div>
+          {/* Quick toggles */}
+          {([['showStrokeNumbers', 'Số nét'], ['traditional', 'Phồn thể']] as const).map(([key, label]) => (
+            <div key={key} className="flex items-center gap-2">
+              <span className="text-xs text-muted">{label}</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={options[key]}
+                aria-label={label}
+                disabled={isGenerating}
+                onClick={() => setOptions((o) => ({ ...o, [key]: !o[key] }))}
+                className={`
+                  relative w-8 rounded-full transition-colors
+                  ${options[key] ? 'bg-accent' : 'bg-surface-2 border border-border'}
+                  disabled:opacity-40
+                `}
+                style={{ height: '18px' }}
+              >
+                <span className={`
+                  absolute top-0.5 w-3.5 h-3.5 bg-white rounded-full shadow-sm
+                  transition-transform duration-150
+                  ${options[key] ? 'left-[calc(100%-15px)]' : 'left-0.5'}
+                `} />
+              </button>
+            </div>
+          ))}
         </section>
 
         {/* ── Advanced Options (collapsible) ─────────────────────────────── */}
