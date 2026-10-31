@@ -9,8 +9,8 @@
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "node scripts/ensure-config.mjs && vite",
+    "build": "node scripts/ensure-config.mjs && tsc -b && vite build",
     "preview": "vite preview",
     "electron:dev": "electron electron/main.cjs",
     "dist:win": "npm run build && electron-builder --win --x64 --publish never",

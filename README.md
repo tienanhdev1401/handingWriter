@@ -41,6 +41,8 @@ Android cần Android SDK (API 35) và JDK 21; đường dẫn JDK đặt trong 
 
 Không cấu hình thì app chạy hoàn toàn offline và ẩn nút đăng nhập.
 
+Hai file cấu hình là của riêng từng người và không nằm trong repo; lần đầu chạy `npm run dev` hoặc `npm run build` sẽ tự tạo chúng từ bản mẫu (`*.example.*`) ở chế độ offline.
+
 Để bật: tạo project Firebase, bật Authentication (Google, Email/Password) và Firestore, dán web config vào `src/firebase.config.ts`, đặt `google-services.json` của app Android vào `android/app/`, dán `firestore.rules` vào tab Rules rồi Publish. Mỗi người dùng chỉ đọc/ghi được dữ liệu của mình.
 
 ## Kiểm tra
