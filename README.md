@@ -27,6 +27,7 @@ Dữ liệu nét lấy từ dataset chính thức [Make Me a Hanzi](https://gith
 | 🎯 Bắn chữ | Chữ rơi, bấm chữ khớp nghĩa (hoặc ngược lại); 3 mạng, âm báo, kỷ lục |
 | ✍️ Tập viết | Vẽ từng nét lên chữ mờ, chấm theo median chuẩn; sai 3 lần hiện gợi ý |
 | 📈 Thống kê | Số từ, số cần ôn, chuỗi ngày học ngay trên thanh tab |
+| ☁️ Đồng bộ | Đăng nhập Google / email (Firebase), sổ từ và tiến độ ôn đồng bộ giữa các thiết bị, tuỳ chọn |
 
 ---
 
@@ -66,6 +67,39 @@ npm run android:apk        # build web → copy vào android/ → gradlew assemb
 - Tải GIF / ZIP / sổ từ trên Android mở **bảng Chia sẻ** (Lưu vào Files, Drive, Zalo…) vì WebView không hỗ trợ tải trực tiếp.
 - `npm run android:open` mở dự án trong Android Studio để ký bản release hoặc chạy trên thiết bị thật.
 - Phiên bản Android (`versionCode`/`versionName` trong `android/app/build.gradle`) cập nhật tay theo `package.json`.
+
+---
+
+## ☁️ Đăng nhập & đồng bộ (Firebase, tuỳ chọn)
+
+Không cấu hình thì app chạy offline như cũ, nút tài khoản ẩn. Cấu hình xong thì sổ từ, bộ từ và tiến độ ôn đồng bộ giữa các thiết bị qua một document Firestore cho mỗi người dùng (gói Spark miễn phí thừa đủ cho dùng cá nhân).
+
+### Tạo project (một lần, ~10 phút)
+
+1. Vào https://console.firebase.google.com → **Add project** → đặt tên (vd. `hanzi-gif`) → tắt Google Analytics → **Create project**.
+2. **Authentication** → **Get started** → tab **Sign-in method**:
+   - Bật **Google** (chọn email hỗ trợ) → Save.
+   - Bật **Email/Password** → Save. (Cần cho bản Windows đóng gói, vì popup Google không chạy trong Electron `app://`.)
+3. **Firestore Database** → **Create database** → chọn vị trí gần (vd. `asia-southeast1`) → **Start in production mode** → Create.
+   Sang tab **Rules**, dán nội dung file [`firestore.rules`](./firestore.rules) trong repo → **Publish**.
+4. **Project settings** (bánh răng) → **Your apps** → **Add app** → biểu tượng **Web** `</>` → nickname tuỳ ý, không cần Hosting → **Register app**.
+   Copy object `firebaseConfig` → dán đè vào [`src/firebase.config.ts`](./src/firebase.config.ts).
+5. (Android) Vẫn trong **Your apps** → **Add app** → **Android**:
+   - Package name: `com.hanzi.gifgenerator`
+   - Debug signing certificate SHA-1: lấy bằng lệnh dưới (lấy bằng lệnh dưới)
+     ```bash
+     keytool -list -v -keystore %USERPROFILE%\.android\debug.keystore -alias androiddebugkey -storepass android -keypass android
+     ```
+   - **Register app** → **Download google-services.json** → thay file giữ chỗ tại `android/app/google-services.json`.
+   - Authentication → Settings → **Authorized domains** không cần sửa cho Android.
+6. Build lại: `npm run build` (web/Electron) và `npm run android:apk` (Android).
+
+### Cách đồng bộ hoạt động
+
+- Đăng nhập lần đầu trên một máy đã có dữ liệu: dữ liệu máy và dữ liệu trên mây **hợp nhất** (không ghi đè). Từ trùng giữ bản đã ôn nhiều hơn.
+- Mỗi thay đổi đẩy lên sau 1,5 giây; thiết bị khác nhận ngay qua listener.
+- Chấm tròn trên avatar: xám = chưa đồng bộ, vàng = đang, xanh = xong, đỏ = lỗi (bấm vào để xem).
+- Dung lượng: ~200 byte/từ, trần 1 MiB/document ≈ 4.900 từ.
 
 ---
 

@@ -2,6 +2,9 @@ import Home from './pages/Home';
 import Learn from './pages/Learn';
 import { I18nProvider } from './i18n';
 import { useHash } from './route';
+import { startCloud } from './learn/cloud';
+
+startCloud();
 
 export default function App() {
   const learn = useHash().match(/^#\/learn(?:\/(\w+))?/);

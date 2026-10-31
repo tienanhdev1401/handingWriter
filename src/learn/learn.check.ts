@@ -5,6 +5,7 @@ import * as Store from './store';
 import { grade, filterScope, nextStreak } from './srs';
 import { judge, resample, toScreen, type Pt } from './judge';
 import type { Word } from './store';
+import { mergeBackups, sameBackup } from './merge';
 
 const ok = (c: boolean, m: string) => { if (!c) throw new Error('FAIL: ' + m); };
 const mk = (char: string, i: number): Word => ({ char, pinyin: '', meaning: String(i), note: '', createdAt: 0, box: 0, due: 0, reviews: 0, lapses: 0, deck: 'default' });
@@ -91,5 +92,22 @@ ok(!Store.isHanzi('下邊x') && !Store.isHanzi('') && !Store.isHanzi('一二三�
 ok(Store.addWord({ char: '下邊', pinyin: 'xià bian', meaning: 'under', note: '' }), 'thêm từ 2 chữ');
 ok(!Store.addWord({ char: '下邊', pinyin: '', meaning: '', note: '' }), 'từ 2 chữ trùng → từ chối');
 ok(Store.getWords().some((w) => w.char === '下邊' && w.pinyin === 'xià bian'), 'từ 2 chữ lưu nguyên chuỗi');
+
+// ── merge (đồng bộ mây) ──
+const D = (id: string, name: string) => ({ id, name, createdAt: 0 });
+const W = (char: string, reviews: number, due: number, deck = 'default', note = ''): Word => ({ char, pinyin: '', meaning: '', note, createdAt: 0, box: 0, due, reviews, lapses: 0, deck });
+const local = { decks: [D('default', ''), D('shop', 'Mua sắm')], words: [W('買', 3, 100, 'shop', 'local'), W('學', 0, 0)] };
+const remote = { decks: [D('default', ''), D('shop', ''), D('hsk', 'HSK 1')], words: [W('買', 5, 50, 'shop', 'remote'), W('水', 2, 10, 'hsk')] };
+ok(mergeBackups(local, null) === local, 'không có mây → giữ nguyên local');
+const m = mergeBackups(local, remote);
+ok(m.decks.length === 3 && m.decks.find((d) => d.id === 'shop')?.name === 'Mua sắm', 'hợp bộ theo id, tên không rỗng thắng');
+ok(m.words.length === 3, 'hợp từ theo chữ');
+ok(m.words.find((w) => w.char === '買')?.note === 'remote', 'cùng chữ → bản ôn nhiều hơn (reviews 5 > 3) thắng');
+const m2 = mergeBackups(remote, local);
+ok(sameBackup(m, m2), 'merge giao hoán → hai máy hội tụ');
+ok(sameBackup(mergeBackups(m, remote), m), 'merge luỹ đẳng với bản đã hợp');
+ok(!sameBackup(local, remote) && sameBackup(local, { decks: [...local.decks].reverse(), words: [...local.words].reverse() }), 'sameBackup bỏ qua thứ tự');
+const tie = mergeBackups({ decks: [D('default', '')], words: [W('一', 1, 5, 'default', 'L')] }, { decks: [D('default', '')], words: [W('一', 1, 9, 'default', 'R')] });
+ok(tie.words[0].note === 'R', 'hoà reviews → due muộn hơn thắng');
 
 console.log('learn.check OK');

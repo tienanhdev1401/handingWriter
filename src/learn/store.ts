@@ -82,6 +82,10 @@ function commit(p: Partial<Pick<State, 'decks' | 'words' | 'sel' | 'current'>>) 
   subs.forEach((f) => f());
 }
 const sub = (f: () => void) => { subs.add(f); return () => { subs.delete(f); }; };
+/** Lắng nghe mọi thay đổi (dùng cho đồng bộ đám mây). */
+export const subscribe = sub;
+/** Thay toàn bộ dữ liệu bằng bản đã hợp nhất từ mây (giữ bộ đang chọn/hiện tại nếu còn tồn tại). */
+export const replaceAll = (b: Backup) => commit({ decks: parseDecks(b.decks), words: parseWords(b.words) });
 
 // ── Đọc ──
 export const getWords = () => state.words;

@@ -1,6 +1,7 @@
 import { useI18n, LANGS } from '../i18n';
 import { useTheme } from '../theme';
 import { useHash } from '../route';
+import Account from './Account';
 
 export default function TopBar() {
   const { t, lang, setLang } = useI18n();
@@ -27,6 +28,7 @@ export default function TopBar() {
       </nav>
 
       <div className="flex items-center gap-2 flex-shrink-0">
+        <Account />
         <button
           type="button"
           onClick={toggleTheme}
