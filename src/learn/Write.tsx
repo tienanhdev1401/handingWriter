@@ -14,11 +14,13 @@ const SIZE = 360;
 const cssRgb = (v: string) => `rgb(${getComputedStyle(document.documentElement).getPropertyValue(v).trim()})`;
 const ghost = 'inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium bg-surface border border-border text-muted hover:text-text hover:border-border-2 hover:-translate-y-px disabled:opacity-40';
 
-/** Vẽ chữ mờ + các nét đã xong (+ nét gợi ý đang chạy) rồi phủ nét người dùng đang kéo. */
-function draw(canvas: HTMLCanvasElement, data: CharacterData, done: number, progress: number, stroke?: Pt[]) {
+const BLIND_KEY = 'learn.writeBlind';
+
+/** Vẽ chữ mờ (nếu `outline`) + các nét đã xong (+ nét gợi ý đang chạy) rồi phủ nét người dùng đang kéo. */
+function draw(canvas: HTMLCanvasElement, data: CharacterData, done: number, progress: number, outline: boolean, stroke?: Pt[]) {
   renderFrame(canvas, data, { completedStrokes: done, currentStrokeProgress: progress }, {
     size: SIZE, strokeColor: cssRgb('--c-text'), outlineColor: cssRgb('--c-border-2'), backgroundColor: '',
-    showOutline: true, showStrokeNumbers: false, transparentBackground: true,
+    showOutline: outline, showStrokeNumbers: false, transparentBackground: true,
   });
   if (!stroke || stroke.length < 2) return;
   const ctx = canvas.getContext('2d');
@@ -49,6 +51,9 @@ export default function Write() {
   const [fails, setFails] = useState(0);   // sai liên tiếp ở nét hiện tại → 3 lần thì gợi ý
   const [misses, setMisses] = useState(0); // tổng sai cả chữ → chấm nhớ/quên
   const [hint, setHint] = useState(false);
+  // Viết ẩn: không hiện chữ mờ, viết theo trí nhớ. Gợi ý (tay hoặc sau 3 lần sai) vẫn lộ chữ tạm thời.
+  const [blind, setBlind] = useState(() => localStorage.getItem(BLIND_KEY) === '1');
+  const toggleBlind = () => setBlind((b) => { try { localStorage.setItem(BLIND_KEY, b ? '0' : '1'); } catch { /* ignore */ } return !b; });
   const [flash, setFlash] = useState<'' | 'ok' | 'bad'>('');
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pts = useRef<Pt[]>([]);
@@ -65,8 +70,8 @@ export default function Write() {
 
   useEffect(() => {
     const c = canvasRef.current;
-    if (c && data) draw(c, data, done, -1);
-  }, [data, done]);
+    if (c && data) draw(c, data, done, -1, !blind);
+  }, [data, done, blind]);
 
   useEffect(() => {
     const c = canvasRef.current;
@@ -74,12 +79,12 @@ export default function Write() {
     const t0 = performance.now();
     let raf = 0;
     const tick = (now: number) => {
-      draw(c, data, done, Math.min(1, ((now - t0) % 1400) / 1000));
+      draw(c, data, done, Math.min(1, ((now - t0) % 1400) / 1000), true); // gợi ý luôn lộ chữ mờ
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-    return () => { cancelAnimationFrame(raf); draw(c, data, done, -1); };
-  }, [hint, data, done]);
+    return () => { cancelAnimationFrame(raf); draw(c, data, done, -1, !blind); };
+  }, [hint, data, done, blind]);
 
   useEffect(() => {
     if (!flash) return;
@@ -115,7 +120,7 @@ export default function Write() {
   const onMove = (e: PointerEvent<HTMLCanvasElement>) => {
     if (!drawing.current || !data) return;
     pts.current.push(pos(e));
-    draw(e.currentTarget, data, done, -1, pts.current);
+    draw(e.currentTarget, data, done, -1, !blind, pts.current);
   };
   const onUp = (e: PointerEvent<HTMLCanvasElement>) => {
     if (!drawing.current || !data) return;
@@ -134,7 +139,7 @@ export default function Write() {
       beep('miss'); setFlash('bad'); setMisses((m) => m + 1);
       const f = fails + 1;
       setFails(f);
-      if (f >= 3) setHint(true); else draw(e.currentTarget, data, done, -1);
+      if (f >= 3) setHint(true); else draw(e.currentTarget, data, done, -1, !blind);
     }
   };
   const onCancel = () => { drawing.current = false; pts.current = []; };
@@ -166,6 +171,15 @@ export default function Write() {
             <span className="ml-auto text-subtle">{t('writeCharOf', { i: ci + 1, n: chars.length })}{curPy ? ` · ${curPy}` : ''}</span>
           </div>
         )}
+        <div className="flex items-center justify-between gap-3 pt-1">
+          <span className={blind ? 'text-text font-medium' : 'text-muted'}>
+            {t('writeBlind')} <span className="text-subtle font-normal">· {t('writeBlindHint')}</span>
+          </span>
+          <button type="button" role="switch" aria-checked={blind} aria-label={t('writeBlind')} onClick={toggleBlind}
+            className={`relative w-9 h-5 rounded-full flex-shrink-0 transition-colors ${blind ? 'bg-accent' : 'bg-border-2'}`}>
+            <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-150 ${blind ? 'left-[calc(100%-18px)]' : 'left-0.5'}`} />
+          </button>
+        </div>
       </div>
 
       <div className={`relative rounded-3xl bg-surface border-2 transition-colors duration-200 shadow-[0_24px_48px_-24px_rgb(0_0_0/0.35)] ${
@@ -190,7 +204,7 @@ export default function Write() {
         )}
       </div>
 
-      <p className="text-xs text-muted max-w-xs text-center text-balance">{t('writeIntro')}</p>
+      <p className="text-xs text-muted max-w-xs text-center text-balance">{t(blind ? 'writeBlindIntro' : 'writeIntro')}</p>
 
       <div className="flex flex-wrap justify-center gap-2">
         <button type="button" onClick={() => goWord(-1)} className={ghost} aria-label={t('cardPrev')} disabled={words.length < 2}>
