@@ -10,7 +10,7 @@ import { judge, toScreen, type Pt } from './judge';
 import { beep } from './sound';
 import Hint from './Hint';
 
-const SIZE = 360;
+const SIZE = 480; // canvas nội bộ; CSS co theo màn (min(100%, 360px) điện thoại, 480px từ lg)
 const cssRgb = (v: string) => `rgb(${getComputedStyle(document.documentElement).getPropertyValue(v).trim()})`;
 const ghost = 'inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium bg-surface border border-border text-muted hover:text-text hover:border-border-2 hover:-translate-y-px disabled:opacity-40';
 
@@ -155,7 +155,7 @@ export default function Write() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-5 p-6">
       <DeckPicker className="justify-center max-w-xl" />
-      <div className="w-full max-w-[360px] text-xs space-y-1.5">
+      <div className="w-full max-w-[360px] lg:max-w-[480px] text-xs lg:text-sm space-y-1.5">
         <div className="flex items-baseline justify-between gap-3">
           <span className="flex items-baseline gap-2 min-w-0">
             {hideChar ? (
@@ -196,7 +196,7 @@ export default function Write() {
 
       <div className={`relative rounded-3xl bg-surface border-2 transition-colors duration-200 shadow-[0_24px_48px_-24px_rgb(0_0_0/0.35)] ${
           flash === 'bad' ? 'border-accent' : flash === 'ok' ? 'border-emerald-500' : finished ? 'border-emerald-500/40' : 'border-border'}`}
-        style={{ width: 'min(100%, 360px)', aspectRatio: '1 / 1' }}>
+        style={{ width: 'min(100%, var(--write-size, 360px))', aspectRatio: '1 / 1' }}>
         <svg className="absolute inset-0 w-full h-full text-border pointer-events-none" viewBox="0 0 100 100" aria-hidden>
           <path d="M0 0L100 100M100 0L0 100M50 0V100M0 50H100" stroke="currentColor" strokeWidth="0.4" strokeDasharray="2 2" fill="none" />
         </svg>

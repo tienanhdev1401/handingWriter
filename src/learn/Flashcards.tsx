@@ -61,7 +61,7 @@ export default function Flashcards() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-6 p-6">
       <DeckPicker className="justify-center max-w-xl" />
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-sm lg:max-w-lg">
         <div className="flex items-center justify-between gap-3 mb-2">
           <ScopePills value={scope} onChange={setScope} />
           <span className="text-xs text-subtle">{n ? t('cardProgress', { i: pos + 1, n }) : ''}</span>
@@ -72,7 +72,7 @@ export default function Flashcards() {
       </div>
 
       {!w ? (
-        <div className="w-full max-w-sm aspect-[4/3] grid place-items-center rounded-3xl bg-surface border border-dashed border-border-2 text-center p-6">
+        <div className="w-full max-w-sm lg:max-w-lg aspect-[4/3] grid place-items-center rounded-3xl bg-surface border border-dashed border-border-2 text-center p-6">
           <div>
             <p className="text-sm text-muted">{study.length === 0 ? t('deckStudyEmpty') : t('scopeEmpty')}</p>
             <button type="button" onClick={() => { setScope('all'); selectAllDecks(); }} className={`${ghost} mt-3`}>{t('scopeAll')}</button>
@@ -80,16 +80,17 @@ export default function Flashcards() {
         </div>
       ) : (
         <>
-          <div className="flip w-full max-w-sm aspect-[4/3]">
+          <div className="flip w-full max-w-sm lg:max-w-lg aspect-[4/3]">
             <button type="button" onClick={() => setFlipped((f) => !f)} aria-pressed={flipped}
               className={`flip-inner block rounded-3xl text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${flipped ? 'is-flipped' : ''}`}>
               <div className="flip-face grid place-items-center rounded-3xl bg-surface border border-border shadow-[0_24px_48px_-24px_rgb(0_0_0/0.35),inset_0_1px_0_rgb(255_255_255/0.06)]">
-                <span className={`font-hanzi leading-none ${[...w.char].length === 1 ? 'text-[7rem]' : [...w.char].length === 2 ? 'text-[5rem]' : 'text-5xl px-4 text-center'}`}>{w.char}</span>
+                <span className={`font-hanzi leading-none ${[...w.char].length === 1 ? 'text-[7rem] lg:text-[9rem]' : [...w.char].length === 2 ? 'text-[5rem] lg:text-[6.5rem]' : 'text-5xl lg:text-6xl px-4 text-center'}`}>{w.char}</span>
                 <span className="absolute bottom-4 text-[11px] text-subtle">{t('cardFront')}</span>
               </div>
               <div className="flip-face flip-back grid place-items-center rounded-3xl bg-surface border border-accent/30 shadow-[0_24px_48px_-24px_rgb(var(--c-accent)/0.35),inset_0_1px_0_rgb(255_255_255/0.06)]">
                 <div className="flex flex-col items-center gap-1.5 px-6">
-                  <StrokeCanvas char={w.char} size={136} />
+                  <StrokeCanvas char={w.char} size={136} className="lg:hidden" />
+                  <StrokeCanvas char={w.char} size={180} className="hidden lg:inline-grid lg:[&_canvas]:inline" />
                   {w.pinyin && <span className="text-xl font-semibold text-accent tracking-tight">{w.pinyin}</span>}
                   {w.meaning && <span className="text-base font-medium line-clamp-2">{w.meaning}</span>}
                   {w.note && <span className="text-xs text-muted leading-relaxed whitespace-pre-wrap line-clamp-2">{w.note}</span>}

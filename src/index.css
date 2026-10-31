@@ -139,3 +139,7 @@ button:not(:disabled):active { transform: scale(0.97); }
 .flip-inner.is-flipped { transform: rotateY(180deg); }
 .flip-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 .flip-back { transform: rotateY(180deg); }
+
+/* ── Tập viết: khung to hơn trên màn rộng (tablet ngang / desktop) ─────── */
+:root { --write-size: 360px; }
+@media (min-width: 1024px) { :root { --write-size: 480px; } }

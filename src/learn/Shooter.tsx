@@ -81,8 +81,11 @@ export default function Shooter() {
   // ponytail: ô nghĩa rộng 144px, 4 cột — chồng nhau khi sân < ~600px; chia 2 hàng khi cần mobile.
   // Chế độ chữ: ô rộng theo từ dài nhất trong vòng (1 chữ = 64px, mỗi chữ thêm 36px).
   const longest = round ? Math.max(1, ...round.items.map((f) => [...f.word.char].length)) : 1;
-  const tileW = mode === 'char' ? 64 + (longest - 1) * 36 : 144;
-  const tile = mode === 'char' ? `h-16 font-hanzi ${longest > 1 ? 'text-2xl px-2 whitespace-nowrap' : 'text-3xl'}` : 'h-14 px-2 text-xs font-medium leading-tight';
+  // ponytail: kích thước ô theo bề rộng cửa sổ lúc render; xoay máy giữa ván → ván sau mới cập nhật.
+  const big = typeof window !== 'undefined' && window.innerWidth >= 1024;
+  const unit = big ? 80 : 64;
+  const tileW = mode === 'char' ? unit + (longest - 1) * (big ? 44 : 36) : big ? 176 : 144;
+  const tile = mode === 'char' ? `${big ? 'h-20' : 'h-16'} font-hanzi ${longest > 1 ? (big ? 'text-3xl' : 'text-2xl') + ' px-2 whitespace-nowrap' : big ? 'text-4xl' : 'text-3xl'}` : `${big ? 'h-16 text-sm' : 'h-14 text-xs'} px-2 font-medium leading-tight`;
   const half = tileW / 2;
   const modeLabel: Record<Mode, string> = { char: t('shootModeChar'), meaning: t('shootModeMeaning') };
 
