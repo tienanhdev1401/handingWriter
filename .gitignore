@@ -24,3 +24,7 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+
+# Android (Capacitor) — build outputs; web assets copied by `cap sync` are ignored in android/.gitignore
+android/app/build/
+android/.gradle/

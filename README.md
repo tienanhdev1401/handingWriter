@@ -54,6 +54,21 @@ Mở trình duyệt tại: **http://localhost:5173**
 
 ---
 
+## 📱 Android (APK)
+
+Dự án Android nằm trong `android/` (Capacitor 7, WebView). Cần Android SDK (platform 35, build-tools 35) và **JDK 21** (`android/gradle.properties` trỏ sẵn tới JBR của Android Studio; đổi `org.gradle.java.home` nếu cài chỗ khác).
+
+```bash
+npm run android:apk        # build web → copy vào android/ → gradlew assembleDebug
+# APK: android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+- Tải GIF / ZIP / sổ từ trên Android mở **bảng Chia sẻ** (Lưu vào Files, Drive, Zalo…) vì WebView không hỗ trợ tải trực tiếp.
+- `npm run android:open` mở dự án trong Android Studio để ký bản release hoặc chạy trên thiết bị thật.
+- Phiên bản Android (`versionCode`/`versionName` trong `android/app/build.gradle`) cập nhật tay theo `package.json`.
+
+---
+
 ## 🏗 Build Production
 
 ```bash

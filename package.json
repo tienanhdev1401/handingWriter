@@ -16,9 +16,15 @@
     "dist:win": "npm run build && electron-builder --win --x64 --publish never",
     "dist:mac": "npm run build && electron-builder --mac --publish never",
     "release:win": "npm run build && electron-builder --win --x64 --publish always",
-    "release:mac": "npm run build && electron-builder --mac --publish always"
+    "release:mac": "npm run build && electron-builder --mac --publish always",
+    "android:sync": "npm run build && cap sync android",
+    "android:apk": "npm run android:sync && cd android && gradlew assembleDebug",
+    "android:open": "cap open android"
   },
   "dependencies": {
+    "@capacitor/core": "^7.6.10",
+    "@capacitor/filesystem": "^7.1.9",
+    "@capacitor/share": "^7.0.4",
     "electron-updater": "^6.8.9",
     "gifenc": "^1.0.3",
     "jszip": "^3.10.1",
@@ -26,6 +32,8 @@
     "react-dom": "^19.2.7"
   },
   "devDependencies": {
+    "@capacitor/android": "^7.6.10",
+    "@capacitor/cli": "^7.6.10",
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",

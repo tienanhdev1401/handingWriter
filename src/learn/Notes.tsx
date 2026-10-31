@@ -6,6 +6,7 @@ import {
 } from './store';
 import { lookup, loadHsk, normalizeHan, HSK_LEVELS, type HskLevel } from './dict';
 import StrokeCanvas from './StrokeCanvas';
+import { saveBlob } from '../platform';
 
 const field =
   'w-full bg-bg border border-border rounded-xl px-3.5 py-2.5 text-sm text-text placeholder:text-subtle ' +
@@ -87,10 +88,7 @@ export default function Notes() {
     } finally { setBusy(false); }
   };
   const exportJson = () => {
-    const url = URL.createObjectURL(new Blob([JSON.stringify(exportData(), null, 2)], { type: 'application/json' }));
-    const a = document.createElement('a');
-    a.href = url; a.download = `so-tu-${new Date().toISOString().slice(0, 10)}.json`; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    void saveBlob(new Blob([JSON.stringify(exportData(), null, 2)], { type: 'application/json' }), `so-tu-${new Date().toISOString().slice(0, 10)}.json`);
   };
   const importJson = async (e: ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];

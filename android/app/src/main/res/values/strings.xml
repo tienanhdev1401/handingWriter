@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Tạo GIF Chữ Hán</string>
+    <string name="title_activity_main">Tạo GIF Chữ Hán</string>
+    <string name="package_name">com.hanzi.gifgenerator</string>
+    <string name="custom_url_scheme">com.hanzi.gifgenerator</string>
+</resources>

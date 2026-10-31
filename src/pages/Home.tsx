@@ -7,6 +7,7 @@ import { preloadDataset } from '../services/hanzi';
 import { useI18n } from '../i18n';
 import TopBar from '../components/TopBar';
 import GifPreview from '../components/GifPreview';
+import { saveBlob } from '../platform';
 import OptionsPanel from '../components/OptionsPanel';
 
 type DatasetStatus = 'idle' | 'loading' | 'ready' | 'error';
@@ -84,11 +85,7 @@ export default function Home() {
     if (!ok.length) return;
     const zip = new JSZip();
     ok.forEach((r) => { if (r.blob) zip.file(`${r.character}.gif`, r.blob); });
-    const blob = await zip.generateAsync({ type: 'blob' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'hanzi-gifs.zip'; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    await saveBlob(await zip.generateAsync({ type: 'blob' }), 'hanzi-gifs.zip');
   }, [results]);
 
   const successCount = results.filter((r) => r.status === 'success').length;

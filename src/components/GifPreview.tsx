@@ -3,6 +3,7 @@ import type { GifResult } from '../types';
 import { useI18n } from '../i18n';
 import { addWord, getWords } from '../learn/store';
 import { lookup } from '../learn/dict';
+import { saveBlob } from '../platform';
 
 interface GifPreviewProps {
   result: GifResult;
@@ -73,11 +74,8 @@ const GifPreview = memo(function GifPreview({
       return;
     }
 
-    // ── Browser fallback: dùng <a> download ──────────────────────────────
-    const a = document.createElement('a');
-    a.href = result.url;
-    a.download = `${result.character}.gif`;
-    a.click();
+    // ── Web / Android: tải về hoặc mở bảng chia sẻ ───────────────────────
+    if (result.blob) await saveBlob(result.blob, `${result.character}.gif`);
   };
 
   return (
