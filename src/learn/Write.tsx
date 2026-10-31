@@ -148,6 +148,9 @@ export default function Write() {
   // Pinyin tách theo âm tiết ("péng you" → ["péng","you"]); chỉ gán theo chữ khi số âm tiết khớp số chữ.
   const syll = word.pinyin.trim().split(/\s+/).filter(Boolean);
   const curPy = chars.length > 1 && syll.length === chars.length ? syll[ci] : '';
+  // Viết ẩn: giấu cả chữ Hán trong header/chip cho tới khi viết xong (gợi ý đang chạy thì lộ)
+  const hideChar = blind && !finished && !hint;
+  const mask = (c: string) => (hideChar ? '？' : c);
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-5 p-6">
@@ -155,8 +158,17 @@ export default function Write() {
       <div className="w-full max-w-[360px] text-xs space-y-1.5">
         <div className="flex items-baseline justify-between gap-3">
           <span className="flex items-baseline gap-2 min-w-0">
-            <span className="font-hanzi text-2xl text-text leading-none">{word.char}</span>
-            {word.pinyin && <span className="text-accent font-medium truncate">{word.pinyin}</span>}
+            {hideChar ? (
+              <span className="flex items-baseline gap-2 min-w-0">
+                <span className="text-accent font-semibold text-base leading-none">{word.pinyin || '…'}</span>
+                {word.meaning && <span className="text-text truncate">{word.meaning}</span>}
+              </span>
+            ) : (
+              <>
+                <span className="font-hanzi text-2xl text-text leading-none">{word.char}</span>
+                {word.pinyin && <span className="text-accent font-medium truncate">{word.pinyin}</span>}
+              </>
+            )}
           </span>
           <span className="text-subtle flex-shrink-0">{data ? t('writeStroke', { i: Math.min(done + 1, n), n }) : ''}</span>
         </div>
@@ -164,7 +176,7 @@ export default function Write() {
           <div className="flex items-center gap-1.5">
             {chars.map((c, i) => (
               <span key={i} className={`inline-flex items-baseline gap-1 px-2 py-0.5 rounded-md border ${i === ci ? 'bg-text text-bg border-text' : i < ci ? 'bg-surface-2 text-muted border-border line-through' : 'bg-surface text-muted border-border'}`}>
-                <span className="font-hanzi text-sm leading-none">{c}</span>
+                <span className="font-hanzi text-sm leading-none">{i < ci ? c : mask(c)}</span>
                 {syll.length === chars.length && <span className={`text-[11px] ${i === ci ? 'opacity-80' : ''}`}>{syll[i]}</span>}
               </span>
             ))}
