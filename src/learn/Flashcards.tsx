@@ -89,7 +89,7 @@ export default function Flashcards() {
               </div>
               <div className="flip-face flip-back grid place-items-center rounded-3xl bg-surface border border-accent/30 shadow-[0_24px_48px_-24px_rgb(var(--c-accent)/0.35),inset_0_1px_0_rgb(255_255_255/0.06)]">
                 <div className="flex flex-col items-center gap-1.5 px-6">
-                  <StrokeCanvas char={w.char} size={108} />
+                  <StrokeCanvas char={w.char} size={136} />
                   {w.pinyin && <span className="text-xl font-semibold text-accent tracking-tight">{w.pinyin}</span>}
                   {w.meaning && <span className="text-base font-medium line-clamp-2">{w.meaning}</span>}
                   {w.note && <span className="text-xs text-muted leading-relaxed whitespace-pre-wrap line-clamp-2">{w.note}</span>}

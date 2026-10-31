@@ -139,11 +139,11 @@ export default function Notes() {
             <label className="block flex-1 space-y-1.5">
               <span className="text-[11px] font-medium text-muted">{t('noteChar')}</span>
               <input value={form.char} onChange={set('char')} maxLength={16} placeholder="下邊" autoFocus
-                aria-invalid={!!err} className={`${field} font-hanzi text-3xl h-[72px] text-center`} />
+                aria-invalid={!!err} className={`${field} font-hanzi text-3xl h-[88px] text-center`} />
             </label>
-            <div className="w-[72px] h-[72px] mt-[22px] flex-shrink-0 rounded-xl bg-surface-2 border border-border grid place-items-center overflow-hidden" aria-hidden>
+            <div className="w-[88px] h-[88px] mt-[22px] flex-shrink-0 rounded-xl bg-surface-2 border border-border grid place-items-center overflow-hidden" aria-hidden>
               {isHanzi(char)
-                ? <StrokeCanvas char={char} size={64} />
+                ? <StrokeCanvas char={char} size={80} />
                 : <span className="font-hanzi text-2xl text-border-2 select-none">永</span>}
             </div>
           </div>
@@ -250,7 +250,7 @@ export default function Notes() {
           <div className="min-h-[40vh] grid place-items-center text-center">
             <div className="max-w-xs animate-in">
               <div className="mx-auto w-24 h-24 rounded-2xl bg-surface border border-border grid place-items-center shadow-sm">
-                <StrokeCanvas char="學" size={80} />
+                <StrokeCanvas char="學" size={96} />
               </div>
               <h3 className="mt-5 text-base font-semibold tracking-tight">{t('deckEmptyTitle', { d: nameOf(cur) })}</h3>
               <p className="mt-1.5 text-sm text-muted text-balance">{t('noteEmpty')}</p>
@@ -261,7 +261,7 @@ export default function Notes() {
             {inDeck.map((w, i) => (
               <li key={w.char} style={{ '--i': Math.min(i, 12) } as React.CSSProperties}
                 className="group relative flex gap-4 p-3.5 rounded-2xl bg-surface border border-border hover:border-border-2 hover:shadow-[0_12px_28px_-14px_rgb(0_0_0/0.3)] hover:-translate-y-0.5 transition-all duration-200">
-                <StrokeCanvas char={w.char} size={88} className="flex-shrink-0 rounded-xl bg-surface-2" />
+                <StrokeCanvas char={w.char} size={112} className="flex-shrink-0 rounded-xl bg-surface-2" />
                 {editing === w.char ? (
                   <div className="min-w-0 flex-1 space-y-1.5">
                     <div className="flex items-center gap-2">

@@ -7,15 +7,14 @@ export default function TopBar() {
   const { theme, toggle: toggleTheme } = useTheme();
   const isLearn = useHash().startsWith('#/learn');
   const seg = (active: boolean) =>
-    `relative px-3.5 py-1.5 rounded-lg text-xs font-semibold tracking-tight transition-all duration-200 ${
+    `relative px-3.5 py-1.5 rounded-lg text-xs font-semibold tracking-tight whitespace-nowrap transition-all duration-200 ${
       active ? 'bg-surface text-text shadow-sm' : 'text-muted hover:text-text'}`;
 
   return (
     <header className="flex items-center justify-between gap-4 px-4 sm:px-6 h-14 border-b border-border/80 bg-surface/70 backdrop-blur-md flex-shrink-0 z-10">
       <a href="#/gif" className="flex items-center gap-2.5 min-w-0 group">
-        <span className="grid place-items-center w-8 h-8 rounded-lg bg-accent text-white font-hanzi text-lg leading-none select-none flex-shrink-0 shadow-[0_4px_12px_-2px_rgb(var(--c-accent)/0.45)] group-hover:scale-105 transition-transform">
-          書
-        </span>
+        <img src="/logo.svg" alt="" width={32} height={32}
+          className="w-8 h-8 rounded-lg flex-shrink-0 shadow-[0_4px_12px_-2px_rgb(var(--c-accent)/0.45)] group-hover:scale-105 transition-transform select-none" />
         <div className="min-w-0 leading-tight hidden sm:block">
           <h1 className="text-[13px] font-semibold tracking-tight text-text truncate">{t('appTitle')}</h1>
           <p className="text-[11px] text-subtle truncate">{t('tagline')}</p>

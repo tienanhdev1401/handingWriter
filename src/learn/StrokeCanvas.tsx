@@ -57,11 +57,12 @@ function One({ char, size, className = '' }: { char: string; size: number; class
 export default function StrokeCanvas({ char, size = 160, className = '' }: { char: string; size?: number; className?: string }) {
   const chars = [...char];
   if (chars.length <= 1) return <One char={char} size={size} className={className} />;
-  const per = Math.floor(size / 2);
+  const per = Math.round(size * 0.6);
+  const cols = Math.min(chars.length, 2);
   return (
     <span role="img" aria-label={char}
-      className={`inline-grid grid-cols-2 content-center justify-items-center ${className}`}
-      style={{ width: size, minHeight: size }}>
+      className={`inline-grid content-center justify-items-center ${className}`}
+      style={{ gridTemplateColumns: `repeat(${cols}, ${per}px)`, width: per * cols, minHeight: size }}>
       {chars.map((c, i) => <One key={`${c}-${i}`} char={c} size={per} />)}
     </span>
   );

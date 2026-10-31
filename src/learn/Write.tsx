@@ -10,7 +10,7 @@ import { judge, toScreen, type Pt } from './judge';
 import { beep } from './sound';
 import Hint from './Hint';
 
-const SIZE = 320;
+const SIZE = 360;
 const cssRgb = (v: string) => `rgb(${getComputedStyle(document.documentElement).getPropertyValue(v).trim()})`;
 const ghost = 'inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium bg-surface border border-border text-muted hover:text-text hover:border-border-2 hover:-translate-y-px disabled:opacity-40';
 
@@ -140,23 +140,37 @@ export default function Write() {
   const onCancel = () => { drawing.current = false; pts.current = []; };
   const restart = () => { setCi(0); setDone(0); setFails(0); setMisses(0); setHint(false); pts.current = []; };
   const goWord = (d: number) => setIdx((i) => (i + d + words.length) % words.length);
-  const charAt = chars.length > 1 ? `${key} · ${t('writeCharOf', { i: ci + 1, n: chars.length })}` : '';
+  // Pinyin tách theo âm tiết ("péng you" → ["péng","you"]); chỉ gán theo chữ khi số âm tiết khớp số chữ.
+  const syll = word.pinyin.trim().split(/\s+/).filter(Boolean);
+  const curPy = chars.length > 1 && syll.length === chars.length ? syll[ci] : '';
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-5 p-6">
       <DeckPicker className="justify-center max-w-xl" />
-      <div className="w-full max-w-[320px] flex items-center justify-between text-xs">
-        <span className="font-medium text-muted flex items-baseline gap-2">
-          {t('tabWrite')}
-          <span className="font-hanzi text-lg text-text leading-none">{word.char}</span>
-          {word.pinyin && <span className="text-accent">{word.pinyin}</span>}
-        </span>
-        <span className="text-subtle">{charAt && <span className="mr-2 text-text">{charAt}</span>}{data ? t('writeStroke', { i: Math.min(done + 1, n), n }) : ''}</span>
+      <div className="w-full max-w-[360px] text-xs space-y-1.5">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="flex items-baseline gap-2 min-w-0">
+            <span className="font-hanzi text-2xl text-text leading-none">{word.char}</span>
+            {word.pinyin && <span className="text-accent font-medium truncate">{word.pinyin}</span>}
+          </span>
+          <span className="text-subtle flex-shrink-0">{data ? t('writeStroke', { i: Math.min(done + 1, n), n }) : ''}</span>
+        </div>
+        {chars.length > 1 && (
+          <div className="flex items-center gap-1.5">
+            {chars.map((c, i) => (
+              <span key={i} className={`inline-flex items-baseline gap-1 px-2 py-0.5 rounded-md border ${i === ci ? 'bg-text text-bg border-text' : i < ci ? 'bg-surface-2 text-muted border-border line-through' : 'bg-surface text-muted border-border'}`}>
+                <span className="font-hanzi text-sm leading-none">{c}</span>
+                {syll.length === chars.length && <span className={`text-[11px] ${i === ci ? 'opacity-80' : ''}`}>{syll[i]}</span>}
+              </span>
+            ))}
+            <span className="ml-auto text-subtle">{t('writeCharOf', { i: ci + 1, n: chars.length })}{curPy ? ` · ${curPy}` : ''}</span>
+          </div>
+        )}
       </div>
 
       <div className={`relative rounded-3xl bg-surface border-2 transition-colors duration-200 shadow-[0_24px_48px_-24px_rgb(0_0_0/0.35)] ${
           flash === 'bad' ? 'border-accent' : flash === 'ok' ? 'border-emerald-500' : finished ? 'border-emerald-500/40' : 'border-border'}`}
-        style={{ width: SIZE, height: SIZE }}>
+        style={{ width: 'min(100%, 360px)', aspectRatio: '1 / 1' }}>
         <svg className="absolute inset-0 w-full h-full text-border pointer-events-none" viewBox="0 0 100 100" aria-hidden>
           <path d="M0 0L100 100M100 0L0 100M50 0V100M0 50H100" stroke="currentColor" strokeWidth="0.4" strokeDasharray="2 2" fill="none" />
         </svg>
