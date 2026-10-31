@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { GenerationOptions } from '../types';
 import { DEFAULT_OPTIONS } from '../types';
+import { useI18n } from '../i18n';
 
 interface OptionsPanelProps {
   options: GenerationOptions;
@@ -42,8 +43,11 @@ const Toggle = ({
     type="button" role="switch" aria-checked={checked}
     disabled={disabled}
     onClick={() => onChange(!checked)}
-    className={`relative w-8 rounded-full transition-colors disabled:opacity-40 flex-shrink-0`}
-    style={{ height: '18px', background: checked ? '#d62828' : '#2a2a2a' }}
+    className={`
+      relative w-8 rounded-full transition-colors disabled:opacity-40 flex-shrink-0
+      ${checked ? 'bg-accent' : 'bg-border'}
+    `}
+    style={{ height: '18px' }}
   >
     <span className={`
       absolute top-0.5 w-3.5 h-3.5 bg-white rounded-full shadow-sm transition-transform duration-150
@@ -53,6 +57,7 @@ const Toggle = ({
 );
 
 export default function OptionsPanel({ options, onChange, disabled }: OptionsPanelProps) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const set = <K extends keyof GenerationOptions>(k: K, v: GenerationOptions[K]) =>
     onChange({ ...options, [k]: v });
@@ -64,7 +69,7 @@ export default function OptionsPanel({ options, onChange, disabled }: OptionsPan
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between px-4 py-2.5 text-xs text-muted hover:text-text transition-colors"
       >
-        <span>Tùy chọn thêm</span>
+        <span>{t('moreOptions')}</span>
         <svg
           className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`}
           fill="none" viewBox="0 0 24 24" stroke="currentColor"
@@ -78,9 +83,9 @@ export default function OptionsPanel({ options, onChange, disabled }: OptionsPan
 
           {/* Colors */}
           <div className="space-y-2.5">
-            <p className="text-[10px] text-subtle uppercase tracking-wider">Màu</p>
+            <p className="text-[11px] text-muted font-medium">{t('colors')}</p>
 
-            <Row label="Màu nét">
+            <Row label={t('strokeColor')}>
               <span className="text-xs font-mono text-subtle">{options.strokeColor}</span>
               <input
                 type="color" value={options.strokeColor} disabled={disabled}
@@ -89,7 +94,7 @@ export default function OptionsPanel({ options, onChange, disabled }: OptionsPan
               />
             </Row>
 
-            <Row label="Màu phác thảo">
+            <Row label={t('outlineColor')}>
               <span className="text-xs font-mono text-subtle">{options.outlineColor}</span>
               <input
                 type="color" value={options.outlineColor} disabled={disabled}
@@ -99,7 +104,7 @@ export default function OptionsPanel({ options, onChange, disabled }: OptionsPan
             </Row>
 
             {!options.transparentBackground && (
-              <Row label="Màu nền">
+              <Row label={t('bgColor')}>
                 <span className="text-xs font-mono text-subtle">{options.backgroundColor}</span>
                 <input
                   type="color" value={options.backgroundColor} disabled={disabled}
@@ -112,19 +117,19 @@ export default function OptionsPanel({ options, onChange, disabled }: OptionsPan
 
           {/* Animation */}
           <div className="space-y-3">
-            <p className="text-[10px] text-subtle uppercase tracking-wider">Hoạt ảnh</p>
+            <p className="text-[11px] text-muted font-medium">{t('animation')}</p>
             <SliderRow
-              label="Tốc độ vẽ" value={options.strokeSpeed}
+              label={t('drawSpeed')} value={options.strokeSpeed}
               min={4} max={30} step={1}
               onChange={(v) => set('strokeSpeed', v)} disabled={disabled}
             />
             <SliderRow
-              label="Khoảng dừng giữa nét" value={options.delayBetweenStrokes}
+              label={t('delayBetween')} value={options.delayBetweenStrokes}
               min={0} max={1500} step={50} unit="ms"
               onChange={(v) => set('delayBetweenStrokes', v)} disabled={disabled}
             />
             <SliderRow
-              label="Dừng cuối vòng lặp" value={options.finalDelay}
+              label={t('finalDelay')} value={options.finalDelay}
               min={500} max={5000} step={250} unit="ms"
               onChange={(v) => set('finalDelay', v)} disabled={disabled}
             />
@@ -132,14 +137,14 @@ export default function OptionsPanel({ options, onChange, disabled }: OptionsPan
 
           {/* Toggles */}
           <div className="space-y-2.5">
-            <p className="text-[10px] text-subtle uppercase tracking-wider">Hiển thị</p>
-            <Row label="Phác thảo nền">
+            <p className="text-[11px] text-muted font-medium">{t('display')}</p>
+            <Row label={t('showOutline')}>
               <Toggle checked={options.showOutline} onChange={(v) => set('showOutline', v)} disabled={disabled} />
             </Row>
-            <Row label="Nền trong suốt">
+            <Row label={t('transparentBg')}>
               <Toggle checked={options.transparentBackground} onChange={(v) => set('transparentBackground', v)} disabled={disabled} />
             </Row>
-            <Row label="Lặp vô hạn">
+            <Row label={t('loop')}>
               <Toggle checked={options.loop} onChange={(v) => set('loop', v)} disabled={disabled} />
             </Row>
           </div>
@@ -151,7 +156,7 @@ export default function OptionsPanel({ options, onChange, disabled }: OptionsPan
             disabled={disabled}
             className="text-xs text-subtle hover:text-muted transition-colors disabled:opacity-40"
           >
-            Đặt lại mặc định
+            {t('resetDefaults')}
           </button>
         </div>
       )}

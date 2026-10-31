@@ -1,5 +1,8 @@
 import { memo, useState } from 'react';
 import type { GifResult } from '../types';
+import { useI18n } from '../i18n';
+import { addWord, getWords } from '../learn/store';
+import { lookup } from '../learn/dict';
 
 interface GifPreviewProps {
   result: GifResult;
@@ -9,13 +12,6 @@ interface GifPreviewProps {
   onRequestSelectFolder: () => Promise<string | null>;
 }
 
-const statusLabel: Record<GifResult['status'], string> = {
-  pending: 'Chờ',
-  processing: 'Đang xử lý',
-  success: 'Xong',
-  error: 'Lỗi',
-};
-
 const GifPreview = memo(function GifPreview({
   result,
   index,
@@ -23,8 +19,24 @@ const GifPreview = memo(function GifPreview({
   saveFolder,
   onRequestSelectFolder,
 }: GifPreviewProps) {
+  const { t } = useI18n();
   const [saving, setSaving] = useState(false);
   const [savedPath, setSavedPath] = useState<string | null>(null);
+  const [inBook, setInBook] = useState(() => getWords().some((w) => w.char === result.character));
+
+  // Lưu vào sổ từ (phần Học tập), tự điền pinyin/nghĩa từ từ điển offline
+  const handleSaveToBook = async () => {
+    const e = await lookup(result.character);
+    addWord({ char: result.character, pinyin: e?.pinyin ?? '', meaning: e?.meaning ?? '', note: '' });
+    setInBook(true);
+  };
+
+  const statusLabel: Record<GifResult['status'], string> = {
+    pending: t('statusPending'),
+    processing: t('statusProcessing'),
+    success: t('statusSuccess'),
+    error: t('statusError'),
+  };
 
   const handleDownload = async () => {
     if (!result.url) return;
@@ -87,11 +99,11 @@ const GifPreview = memo(function GifPreview({
       <div className="flex items-center justify-between px-3 pt-2.5 pb-1.5">
         <span className="font-hanzi text-2xl leading-none text-text">{result.character}</span>
         <span className={`text-[10px] font-medium ${
-          result.status === 'success'    ? 'text-emerald-500' :
+          result.status === 'success'    ? 'text-emerald-700 dark:text-emerald-500' :
           result.status === 'error'      ? 'text-accent' :
-          result.status === 'processing' ? 'text-blue-400' : 'text-subtle'
+          result.status === 'processing' ? 'text-muted' : 'text-subtle'
         }`}>
-          {savedPath ? '✓ Đã lưu' : statusLabel[result.status]}
+          {savedPath ? t('saved') : statusLabel[result.status]}
         </span>
       </div>
 
@@ -127,7 +139,17 @@ const GifPreview = memo(function GifPreview({
             disabled:opacity-60
           "
         >
-          {saving ? 'Đang lưu…' : savedPath ? 'Lưu lại' : 'Tải về'}
+          {saving ? t('saving') : savedPath ? t('saveAgain') : t('download')}
+        </button>
+      )}
+      {result.status === 'success' && (
+        <button
+          type="button"
+          onClick={handleSaveToBook}
+          disabled={inBook}
+          className="mx-2.5 mb-2.5 -mt-1 py-1 text-[11px] font-medium text-muted hover:text-accent disabled:text-subtle disabled:cursor-default transition-colors"
+        >
+          {inBook ? t('inBook') : t('saveToBook')}
         </button>
       )}
     </div>

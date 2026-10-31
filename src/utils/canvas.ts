@@ -267,14 +267,13 @@ export function renderFrame(
   state: RenderState,
   options: Pick<
     GenerationOptions,
-    | 'size'
     | 'strokeColor'
     | 'outlineColor'
     | 'backgroundColor'
     | 'showOutline'
     | 'showStrokeNumbers'
     | 'transparentBackground'
-  >
+  > & { size: number }
 ): void {
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) throw new Error('Canvas 2D context not available');

@@ -9,6 +9,13 @@
     <meta property="og:title" content="Tạo GIF Nét Chữ Hán" />
     <meta property="og:description" content="Tạo GIF động hiển thị thứ tự nét chữ Hán chuẩn xác." />
     <title>Tạo GIF Nét Chữ Hán</title>
+    <!-- Đặt theme trước khi vẽ để không nháy sáng khi user đã chọn tối -->
+    <script>
+      try {
+        var t = localStorage.getItem('theme');
+        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

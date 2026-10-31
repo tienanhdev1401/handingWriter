@@ -3,6 +3,7 @@ import type { GifResult, GenerationOptions, ProgressCallback } from '../types';
 import { getCharacterData } from '../services/hanzi';
 import { generateCharacterFrames } from '../utils/canvas';
 import { encodeGif } from '../services/gif';
+import { useI18n } from '../i18n';
 
 interface UseGifGeneratorReturn {
   results: GifResult[];
@@ -18,6 +19,7 @@ interface UseGifGeneratorReturn {
 const yieldToUI = () => new Promise<void>((r) => setTimeout(r, 0));
 
 export function useGifGenerator(): UseGifGeneratorReturn {
+  const { t } = useI18n();
   const [results, setResults] = useState<GifResult[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState({
@@ -98,7 +100,7 @@ export function useGifGenerator(): UseGifGeneratorReturn {
               next[i] = {
                 ...next[i],
                 status: 'error',
-                error: 'Không tìm thấy dữ liệu nét cho ký tự này.',
+                error: t('errNoStroke'),
               };
               return next;
             });
@@ -125,7 +127,7 @@ export function useGifGenerator(): UseGifGeneratorReturn {
           });
         } catch (err) {
           const message =
-            err instanceof Error ? err.message : 'Đã xảy ra lỗi không xác định.';
+            err instanceof Error ? err.message : t('errUnknown');
           setResults((prev) => {
             const next = [...prev];
             next[i] = { ...next[i], status: 'error', error: message };
@@ -142,7 +144,7 @@ export function useGifGenerator(): UseGifGeneratorReturn {
         setProgress((p) => ({ ...p, current: p.total }));
       }
     },
-    []
+    [t]
   );
 
   return {

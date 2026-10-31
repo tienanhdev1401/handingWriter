@@ -4,24 +4,26 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  darkMode: ['selector', '[data-theme="dark"]'],
   theme: {
     extend: {
       colors: {
-        // Minimal dark palette
-        bg: '#0c0c0c',
-        surface: '#161616',
-        'surface-2': '#1f1f1f',
-        border: '#2a2a2a',
-        'border-2': '#383838',
-        text: '#efefef',
-        muted: '#666666',
-        subtle: '#444444',
-        // Single accent — Chinese vermilion
-        accent: '#d62828',
-        'accent-h': '#c02222',
+        // Semantic tokens — giá trị thật nằm ở CSS variable (xem index.css),
+        // đổi theo data-theme. rgb(... / <alpha-value>) để /opacity vẫn chạy.
+        bg: 'rgb(var(--c-bg) / <alpha-value>)',
+        surface: 'rgb(var(--c-surface) / <alpha-value>)',
+        'surface-2': 'rgb(var(--c-surface-2) / <alpha-value>)',
+        border: 'rgb(var(--c-border) / <alpha-value>)',
+        'border-2': 'rgb(var(--c-border-2) / <alpha-value>)',
+        text: 'rgb(var(--c-text) / <alpha-value>)',
+        muted: 'rgb(var(--c-muted) / <alpha-value>)',
+        subtle: 'rgb(var(--c-subtle) / <alpha-value>)',
+        // Single accent — Chinese vermilion (giữ nguyên cả 2 theme)
+        accent: 'rgb(var(--c-accent) / <alpha-value>)',
+        'accent-h': 'rgb(var(--c-accent-h) / <alpha-value>)',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['"Be Vietnam Pro"', 'system-ui', '-apple-system', 'sans-serif'],
         hanzi: ['"Noto Serif SC"', '"Source Han Serif SC"', 'serif'],
         mono: ['"JetBrains Mono"', 'Menlo', 'monospace'],
       },

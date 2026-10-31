@@ -20,7 +20,13 @@ Dữ liệu nét lấy từ dataset chính thức [Make Me a Hanzi](https://gith
 | 🔁 Lặp vô hạn | Tùy chọn bật/tắt loop |
 | 🪟 Nền trong suốt | Hỗ trợ GIF với nền alpha (1-bit transparency) |
 | 🚀 Không chặn UI | Tạo GIF tuần tự, mỗi ký tự yield cho React render |
-| 🇻🇳 Giao diện tiếng Việt | Hoàn toàn bằng tiếng Việt |
+| 🌐 Đa ngôn ngữ | Tiếng Việt / English, giao diện sáng/tối |
+| 📒 Sổ từ | Nhiều bộ từ theo chủ đề (vd. Đi mua sắm); gõ chữ đơn hoặc từ nhiều chữ, giản/phồn thể → pinyin + nghĩa tự điền (từ điển offline); sửa/chuyển bộ tại chỗ, xuất/nhập JSON, nạp HSK 1–3 thành bộ riêng |
+| 🗂️ Học theo bộ | Lật thẻ, Bắn chữ, Tập viết chọn một hoặc kết hợp nhiều bộ để học |
+| 🃏 Lật thẻ | Flashcard lật 3D, chấm Nhớ/Quên theo Leitner 5 hộp; lọc Tất cả / Cần ôn / Mới |
+| 🎯 Bắn chữ | Chữ rơi, bấm chữ khớp nghĩa (hoặc ngược lại); 3 mạng, âm báo, kỷ lục |
+| ✍️ Tập viết | Vẽ từng nét lên chữ mờ, chấm theo median chuẩn; sai 3 lần hiện gợi ý |
+| 📈 Thống kê | Số từ, số cần ôn, chuỗi ngày học ngay trên thanh tab |
 
 ---
 
@@ -69,7 +75,11 @@ npm run preview
 handingWriter/
 ├── public/
 │   └── data/
-│       └── graphics.txt          # Make Me a Hanzi dataset (~30MB, 9574 ký tự)
+│       ├── graphics.txt          # Make Me a Hanzi dataset (~30MB, 9574 ký tự)
+│       ├── dict.json             # Rút gọn từ Make Me a Hanzi dictionary.txt: pinyin + nghĩa (~430KB)
+│       ├── t2s.json              # Phồn/dị thể → giản thể theo từng chữ, để tra khi khoá phồn thể không có sẵn
+│       ├── words.json            # Từ ≥2 chữ (HSK, ~11k) khoá cả giản lẫn phồn: pinyin + nghĩa
+│       └── hsk.json              # Chữ đơn HSK 1–3 (bản 2012) từ complete-hsk-vocabulary (MIT)
 ├── src/
 │   ├── types/
 │   │   ├── index.ts              # TypeScript interfaces cho toàn app
@@ -84,9 +94,12 @@ handingWriter/
 │   ├── components/
 │   │   ├── GifPreview.tsx        # Card hiển thị 1 GIF + download
 │   │   └── OptionsPanel.tsx      # Bảng tùy chọn collapsible
+│   ├── learn/                    # Học tập: store (localStorage), srs (Leitner), dict, judge (chấm nét), Notes, Flashcards, Shooter, Write
 │   ├── pages/
-│   │   └── Home.tsx              # Trang chính
-│   ├── App.tsx
+│   │   ├── Home.tsx              # Trang tạo GIF
+│   │   └── Learn.tsx             # Trang học tập (tab: sổ từ / lật thẻ / bắn chữ / tập viết)
+│   ├── App.tsx                   # Điều hướng hash: #/gif | #/learn/*
+│   ├── i18n.tsx / theme.ts / route.ts
 │   ├── main.tsx
 │   └── index.css
 ├── index.html
@@ -148,7 +161,7 @@ Blob URL → GifPreview card
 | GIF encoder | gifenc (pure JS, no Worker) |
 | ZIP | jszip |
 | Dữ liệu nét | Make Me a Hanzi `graphics.txt` |
-| Font | Inter + Noto Serif SC (Google Fonts) |
+| Font | Be Vietnam Pro + Noto Serif SC (Google Fonts) |
 
 ---
 
@@ -184,5 +197,6 @@ Blob URL → GifPreview card
 
 ## 📄 License & Nguồn Dữ Liệu
 
-- Dữ liệu nét: [Make Me a Hanzi](https://github.com/skishore/makemeahanzi) — GPLv3
+- Dữ liệu nét + từ điển: [Make Me a Hanzi](https://github.com/skishore/makemeahanzi) — GPLv3 (graphics.txt, dictionary.txt)
+- Danh sách HSK: [complete-hsk-vocabulary](https://github.com/drkameleon/complete-hsk-vocabulary) — MIT
 - Ứng dụng này: MIT
