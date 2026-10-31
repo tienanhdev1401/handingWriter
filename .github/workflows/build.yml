@@ -68,6 +68,8 @@ jobs:
 
   publish-release:
     needs: [build-windows, build-macos]
+    # Chỉ phát hành khi push tag v*; chạy tay (workflow_dispatch) chỉ build artifact để tải về thử.
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
