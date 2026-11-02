@@ -153,4 +153,24 @@ ok(sameBackup(eA, fromCloud), 'sameBackup coi là giống nhau → không ghi l�
 ok(canon({ b: 1, a: [{ y: 2, x: 1 }] }) === canon({ a: [{ x: 1, y: 2 }], b: 1 }), 'canon sắp khoá đệ quy');
 ok(canon({ a: 1 }) !== canon({ a: 2 }), 'canon phân biệt giá trị khác');
 
+// ── đếm từ khi bộ thay đổi (kịch bản người dùng nêu) ──
+const unsorted = () => Store.getWords().filter((w) => w.deck === Store.DEFAULT_DECK).length;
+const total = () => Store.getWords().length;
+const inD = (id: string) => Store.getWords().filter((w) => w.deck === id).length;
+const t0 = total(), u0 = unsorted();
+const cA = Store.addDeck('A');
+['甲', '乙', '丙', '丁'].forEach((c) => Store.addWord({ char: c, pinyin: '', meaning: '', note: '' }, cA));
+ok(inD(cA) === 4 && total() === t0 + 4 && unsorted() === u0, 'bộ A 4 chữ → Tất cả +4, Chưa phân loại không đổi');
+Store.removeDeck(cA, 'delete');
+ok(total() === t0 && unsorted() === u0, 'xóa bộ A (xóa cả từ) → Tất cả về như cũ, Chưa phân loại không đổi');
+const cB = Store.addDeck('B');
+['戊', '己', '庚', '辛', '壬'].forEach((c) => Store.addWord({ char: c, pinyin: '', meaning: '', note: '' }, cB));
+ok(inD(cB) === 5 && total() === t0 + 5, 'bộ B 5 chữ → Tất cả +5');
+Store.removeWord('壬');
+ok(inD(cB) === 4 && total() === t0 + 4, 'xóa 1 chữ trong B → B=4, Tất cả +4');
+Store.removeDeck(cB, 'move');
+ok(unsorted() === u0 + 4 && total() === t0 + 4, 'xóa bộ B (chuyển từ) → 4 từ sang Chưa phân loại, Tất cả không đổi');
+['戊', '己', '庚', '辛'].forEach((c) => Store.removeWord(c));
+ok(unsorted() === u0 && total() === t0, 'xóa 4 từ đó → về như cũ');
+
 console.log('learn.check OK');

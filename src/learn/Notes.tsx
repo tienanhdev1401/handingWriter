@@ -47,6 +47,10 @@ export default function Notes() {
   const selectedRef = useRef(selected); selectedRef.current = selected;
 
   // ── danh sách ──
+  const ALL = '*';
+  const [view, setView] = useState<string>(() => localStorage.getItem('learn.notesView') === ALL ? ALL : 'deck');
+  const showAll = view === ALL;
+  const pickTab = (id: string) => { if (id === ALL) { setView(ALL); } else { setView('deck'); setCurrentDeck(id); } try { localStorage.setItem('learn.notesView', id === ALL ? ALL : 'deck'); } catch { /* ignore */ } };
   const [q, setQ] = useState('');
   const [busy, setBusy] = useState(false);
   const [newDeck, setNewDeck] = useState<string | null>(null);
@@ -66,9 +70,9 @@ export default function Notes() {
 
   const query = fold(q.trim());
   const inDeck = useMemo(() => {
-    if (!query) return words.filter((w) => w.deck === current);
+    if (!query) return showAll ? words : words.filter((w) => w.deck === current);
     return words.filter((w) => w.char.includes(query) || fold(w.pinyin).includes(query) || fold(w.meaning).includes(query) || fold(w.note).includes(query));
-  }, [words, current, query]);
+  }, [words, current, query, showAll]);
 
   // Từ đang sửa bị xóa (ở máy khác qua đồng bộ…) → về chế độ thêm mới
   useEffect(() => { if (selected && !editing) reset(); }, [selected, editing]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -260,11 +264,18 @@ export default function Notes() {
       <main className="flex-1 min-w-0 md:overflow-y-auto p-4 sm:p-5 md:p-6">
         {/* Bộ từ: xuống dòng, không cuộn ngang */}
         <div role="tablist" aria-label={t('decks')} className="flex flex-wrap items-center gap-1.5 mb-3">
-          {decks.map((d) => (
-            <button key={d.id} type="button" role="tab" aria-selected={d.id === current} onClick={() => setCurrentDeck(d.id)} className={chip(d.id === current)}>
-              {nameOf(d)}<span className={`tabular-nums ${d.id === current ? 'opacity-70' : 'text-subtle'}`}>{countOf.get(d.id) ?? 0}</span>
-            </button>
-          ))}
+          <button type="button" role="tab" aria-selected={showAll} onClick={() => pickTab(ALL)} className={chip(showAll)}>
+            {t('deckAllWords')}<span className={`tabular-nums ${showAll ? 'opacity-70' : 'text-subtle'}`}>{words.length}</span>
+          </button>
+          <span className="w-px h-5 bg-border mx-0.5" aria-hidden />
+          {decks.map((d) => {
+            const on = !showAll && d.id === current;
+            return (
+              <button key={d.id} type="button" role="tab" aria-selected={on} onClick={() => pickTab(d.id)} className={chip(on)}>
+                {nameOf(d)}<span className={`tabular-nums ${on ? 'opacity-70' : 'text-subtle'}`}>{countOf.get(d.id) ?? 0}</span>
+              </button>
+            );
+          })}
           {newDeck === null ? (
             <button type="button" onClick={() => setNewDeck('')} className={`${chip(false)} border-dashed`} aria-label={t('deckNew')}><span aria-hidden>+</span> {t('deckNew')}</button>
           ) : (
@@ -281,7 +292,7 @@ export default function Notes() {
         <div className="flex flex-wrap items-center gap-2 mb-4 min-h-[36px]">
           {rename === null ? (
             <h2 className="text-base font-semibold tracking-tight mr-auto">
-              {nameOf(cur)} <span className="text-xs font-normal text-subtle ml-1">{query ? t('noteFoundAll', { n: inDeck.length }) : t('noteCount', { n: countOf.get(current) ?? 0 })}</span>
+              {showAll ? t('deckAllWords') : nameOf(cur)} <span className="text-xs font-normal text-subtle ml-1">{query ? t('noteFoundAll', { n: inDeck.length }) : t('noteCount', { n: showAll ? words.length : countOf.get(current) ?? 0 })}</span>
             </h2>
           ) : (
             <form onSubmit={saveRename} className="flex items-center gap-1.5 mr-auto">
@@ -290,7 +301,7 @@ export default function Notes() {
               <button type="button" onClick={() => setRename(null)} className="px-2 py-1.5 text-[11px] text-muted hover:text-text">{t('noteCancel')}</button>
             </form>
           )}
-          {current !== DEFAULT_DECK && rename === null && (
+          {!showAll && current !== DEFAULT_DECK && rename === null && (
             <>
               <button type="button" onClick={() => setRename(cur.name)} className="text-[11px] text-muted hover:text-text">{t('deckRename')}</button>
               {!confirmDel ? (
@@ -333,12 +344,12 @@ export default function Notes() {
           <div className="min-h-[40vh] grid place-items-center text-center">
             <div className="max-w-xs animate-in">
               <div className="mx-auto w-24 h-24 rounded-2xl bg-surface border border-border grid place-items-center shadow-sm"><StrokeCanvas char="學" size={96} /></div>
-              <h3 className="mt-5 text-base font-semibold tracking-tight">{query ? t('noteNoMatch') : t('deckEmptyTitle', { d: nameOf(cur) })}</h3>
+              <h3 className="mt-5 text-base font-semibold tracking-tight">{query ? t('noteNoMatch') : showAll ? t('noteEmptyTitle') : t('deckEmptyTitle', { d: nameOf(cur) })}</h3>
               {!query && <p className="mt-1.5 text-sm text-muted text-balance">{t('noteEmpty')}</p>}
             </div>
           </div>
         ) : (
-          <ul key={current} className="stagger grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+          <ul key={showAll ? ALL : current} className="stagger grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {inDeck.map((w, i) => {
               const on = selected === w.char;
               return (
@@ -353,7 +364,7 @@ export default function Notes() {
                         <span className="font-hanzi text-[28px] leading-none">{w.char}</span>
                         {w.pinyin && <span className="text-sm font-medium text-accent">{w.pinyin}</span>}
                       </div>
-                      {query && w.deck !== current && (
+                      {(showAll || (query && w.deck !== current)) && (
                         <span className="mt-1.5 inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-surface-2 text-muted border border-border">{nameOf(decks.find((d) => d.id === w.deck) ?? cur)}</span>
                       )}
                       {w.meaning && <p className="mt-1.5 text-sm font-medium line-clamp-2">{w.meaning}</p>}
