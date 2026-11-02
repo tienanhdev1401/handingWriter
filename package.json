@@ -2,7 +2,7 @@
   "name": "tao-gif-chu-han",
   "productName": "Tao GIF Chu Han",
   "private": true,
-  "version": "1.8.0",
+  "version": "1.8.1",
   "description": "Tạo GIF động thứ tự nét chữ Hán từ dữ liệu chuẩn Make Me a Hanzi",
   "author": "Hanzi Writer",
   "license": "MIT",
@@ -19,7 +19,8 @@
     "release:mac": "npm run build && electron-builder --mac --publish always",
     "android:sync": "npm run build && cap sync android",
     "android:apk": "npm run android:sync && cd android && gradlew assembleDebug",
-    "android:open": "cap open android"
+    "android:open": "cap open android",
+    "bump": "node scripts/bump-version.mjs"
   },
   "dependencies": {
     "@capacitor-firebase/authentication": "^7.5.0",

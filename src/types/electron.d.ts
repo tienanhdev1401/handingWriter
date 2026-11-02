@@ -17,6 +17,8 @@ interface ElectronAPI {
 }
 
 declare global {
+  /** Phiên bản từ package.json, nhúng lúc build (vite.config.ts define). */
+  const __APP_VERSION__: string;
   interface Window {
     electronAPI?: ElectronAPI;
   }

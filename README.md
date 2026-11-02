@@ -30,6 +30,8 @@ npm run electron:dev   # cửa sổ Electron (cần dev server đang chạy)
 
 ## Build
 
+Mỗi lần sửa lỗi, tăng phiên bản trước khi build: `npm run bump` (patch) hoặc `npm run bump minor`. Số phiên bản hiện ở góc trên trái app và trong tên file build.
+
 ```bash
 npm run dist:win       # Windows installer → release/
 npm run android:apk    # Android debug APK → android/app/build/outputs/apk/debug/

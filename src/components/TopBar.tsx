@@ -18,7 +18,7 @@ export default function TopBar() {
           className="w-8 h-8 rounded-lg flex-shrink-0 shadow-[0_4px_12px_-2px_rgb(var(--c-accent)/0.45)] group-hover:scale-105 transition-transform select-none" />
         <div className="min-w-0 leading-tight hidden sm:block">
           <h1 className="text-[13px] font-semibold tracking-tight text-text truncate">{t('appTitle')}</h1>
-          <p className="text-[11px] text-subtle truncate">{t('tagline')}</p>
+          <p className="text-[11px] text-subtle truncate">{t('tagline')} <span className="font-mono opacity-70">v{__APP_VERSION__}</span></p>
         </div>
       </a>
 
