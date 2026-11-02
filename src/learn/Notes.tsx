@@ -44,6 +44,7 @@ export default function Notes() {
   const [saved, setSaved] = useState(false);
   const charInput = useRef<HTMLInputElement>(null);
   const editing = selected ? words.find((w) => w.char === selected) ?? null : null;
+  const selectedRef = useRef(selected); selectedRef.current = selected;
 
   // ── danh sách ──
   const [q, setQ] = useState('');
@@ -52,12 +53,21 @@ export default function Notes() {
   const [rename, setRename] = useState<string | null>(null);
   const [confirmDel, setConfirmDel] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (e.key === '/' && tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') { e.preventDefault(); searchRef.current?.focus(); }
+      if (e.key === 'Escape' && selectedRef.current) { resetRef.current(); (e.target as HTMLElement | null)?.blur?.(); }
+    };
+    addEventListener('keydown', onKey);
+    return () => removeEventListener('keydown', onKey);
+  }, []);
 
   const query = fold(q.trim());
   const inDeck = useMemo(() => {
-    const list = words.filter((w) => w.deck === current);
-    if (!query) return list;
-    return list.filter((w) => w.char.includes(query) || fold(w.pinyin).includes(query) || fold(w.meaning).includes(query) || fold(w.note).includes(query));
+    if (!query) return words.filter((w) => w.deck === current);
+    return words.filter((w) => w.char.includes(query) || fold(w.pinyin).includes(query) || fold(w.meaning).includes(query) || fold(w.note).includes(query));
   }, [words, current, query]);
 
   // Từ đang sửa bị xóa (ở máy khác qua đồng bộ…) → về chế độ thêm mới
@@ -78,17 +88,22 @@ export default function Notes() {
     return () => { live = false; };
   }, [char, selected]);
 
-  // Tự lưu khi SỬA: 600 ms sau lần gõ cuối
+  // Tự lưu khi SỬA: 600 ms sau lần gõ cuối. Chỉ phụ thuộc vào form + chữ đang chọn, KHÔNG vào object từ:
+  // đồng bộ mây thay object liên tục sẽ reset bộ đếm và không bao giờ lưu.
+  const editingRef = useRef(editing); editingRef.current = editing;
   useEffect(() => {
-    if (!editing || same(form, toForm(editing))) return;
+    const w = editingRef.current;
+    if (!w || same(form, toForm(w))) return;
     const id = setTimeout(() => {
-      updateWord(editing.char, { pinyin: form.pinyin.trim(), meaning: form.meaning.trim(), note: form.note.trim(), deck: form.deck });
+      updateWord(w.char, { pinyin: form.pinyin.trim(), meaning: form.meaning.trim(), note: form.note.trim(), deck: form.deck });
       setSaved(true);
     }, 600);
     return () => clearTimeout(id);
-  }, [form, editing]);
+  }, [form, selected]);
 
+  const resetRef = useRef<() => void>(() => {});
   const reset = () => { setSelected(null); setForm({ ...EMPTY, deck: current }); auto.current = { pinyin: true, meaning: true }; setErr(''); };
+  resetRef.current = reset;
   const select = (w: Word) => { setSelected(w.char); setForm(toForm(w)); setErr(''); charInput.current?.closest('aside')?.scrollTo({ top: 0, behavior: 'smooth' }); };
   const set = (k: keyof Form) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const v = e.target.value;
@@ -132,7 +147,13 @@ export default function Notes() {
   };
   const createDeck = (e: FormEvent) => { e.preventDefault(); const name = (newDeck ?? '').trim(); if (!name) return; addDeck(name); setNewDeck(null); setMsg(t('deckCreated', { d: name })); };
   const saveRename = (e: FormEvent) => { e.preventDefault(); const name = (rename ?? '').trim(); if (name) renameDeck(current, name); setRename(null); };
-  const deleteDeck = () => { if (!confirmDel) { setConfirmDel(true); return; } const name = nameOf(cur); removeDeck(current); setMsg(t('deckDeleted', { d: name })); };
+  const deleteDeck = (mode: 'move' | 'delete') => {
+    const name = nameOf(cur), n = countOf.get(current) ?? 0;
+    removeDeck(current, mode);
+    setConfirmDel(false);
+    if (selected) reset();
+    setMsg(mode === 'delete' && n ? t('deckDeletedWithWords', { d: name, n }) : t('deckDeleted', { d: name }));
+  };
 
   const deckSelect = (
     <label className="block space-y-1.5">
@@ -206,7 +227,7 @@ export default function Notes() {
 
           {editing ? (
             <div className="flex gap-2">
-              <button type="submit" className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white bg-accent hover:bg-accent-h">{t('noteDone')}</button>
+              <button type="submit" className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white bg-accent hover:bg-accent-h">+ {t('noteFormTitle')}</button>
               <a href={`#/learn/write?w=${encodeURIComponent(editing.char)}`} className="px-3.5 py-2.5 rounded-xl text-sm font-medium bg-surface-2 border border-border text-muted hover:text-text" title={t('tabWrite')}>✍</a>
               <button type="button" onClick={remove} className="px-3.5 py-2.5 rounded-xl text-sm font-medium bg-surface-2 border border-border text-muted hover:text-white hover:bg-accent hover:border-accent" aria-label={t('noteDelete')}>
                 {t('noteDelete')}
@@ -260,7 +281,7 @@ export default function Notes() {
         <div className="flex flex-wrap items-center gap-2 mb-4 min-h-[36px]">
           {rename === null ? (
             <h2 className="text-base font-semibold tracking-tight mr-auto">
-              {nameOf(cur)} <span className="text-xs font-normal text-subtle ml-1">{query ? t('noteFound', { n: inDeck.length, total: countOf.get(current) ?? 0 }) : t('noteCount', { n: countOf.get(current) ?? 0 })}</span>
+              {nameOf(cur)} <span className="text-xs font-normal text-subtle ml-1">{query ? t('noteFoundAll', { n: inDeck.length }) : t('noteCount', { n: countOf.get(current) ?? 0 })}</span>
             </h2>
           ) : (
             <form onSubmit={saveRename} className="flex items-center gap-1.5 mr-auto">
@@ -269,23 +290,43 @@ export default function Notes() {
               <button type="button" onClick={() => setRename(null)} className="px-2 py-1.5 text-[11px] text-muted hover:text-text">{t('noteCancel')}</button>
             </form>
           )}
-          <label className="relative">
-            <span className="sr-only">{t('noteSearch')}</span>
-            <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-subtle pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="11" cy="11" r="7" strokeWidth={1.8} /><path strokeLinecap="round" strokeWidth={1.8} d="M20 20l-3.5-3.5" /></svg>
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('noteSearch')} className={`${small} pl-8 w-44 sm:w-56`} />
-          </label>
           {current !== DEFAULT_DECK && rename === null && (
             <>
               <button type="button" onClick={() => setRename(cur.name)} className="text-[11px] text-muted hover:text-text">{t('deckRename')}</button>
-              <button type="button" onClick={deleteDeck} onBlur={() => setConfirmDel(false)}
-                className={`text-[11px] px-2 py-1 rounded-md ${confirmDel ? 'bg-accent text-white font-semibold' : 'text-muted hover:text-accent'}`}>
-                {confirmDel ? t('deckDeleteConfirm', { d: t('deckDefault') }) : t('deckDelete')}
-              </button>
+              {!confirmDel ? (
+                <button type="button" onClick={() => setConfirmDel(true)} className="text-[11px] text-muted hover:text-accent">{t('deckDelete')}</button>
+              ) : (
+                <span className="inline-flex flex-wrap items-center gap-1.5 px-2 py-1 rounded-lg bg-accent/10 border border-accent/30 animate-in">
+                  <span className="text-[11px] font-medium">{t('deckDeleteAsk', { d: nameOf(cur) })}</span>
+                  {(countOf.get(current) ?? 0) > 0 ? (
+                    <>
+                      <button type="button" onClick={() => deleteDeck('delete')} className="px-2 py-0.5 rounded-md text-[11px] font-semibold text-white bg-accent hover:bg-accent-h">{t('deckDeleteWithWords', { n: countOf.get(current) ?? 0 })}</button>
+                      <button type="button" onClick={() => deleteDeck('move')} className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-surface border border-border text-muted hover:text-text">{t('deckKeepWords', { n: countOf.get(current) ?? 0, g: t('deckDefault') })}</button>
+                    </>
+                  ) : (
+                    <button type="button" onClick={() => deleteDeck('delete')} className="px-2 py-0.5 rounded-md text-[11px] font-semibold text-white bg-accent hover:bg-accent-h">{t('deckDelete')}</button>
+                  )}
+                  <button type="button" onClick={() => setConfirmDel(false)} className="px-1.5 text-[11px] text-muted hover:text-text">{t('noteCancel')}</button>
+                </span>
+              )}
             </>
           )}
           <button type="button" onClick={() => fileRef.current?.click()} className={tool}>{t('noteImport')}</button>
           <input ref={fileRef} type="file" accept="application/json,.json" onChange={importJson} className="sr-only" />
           <button type="button" onClick={exportJson} disabled={words.length === 0} className={tool}>{t('noteExport')}</button>
+        </div>
+
+        <div className="relative mb-4 max-w-xl">
+          <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="11" cy="11" r="7" strokeWidth={1.8} /><path strokeLinecap="round" strokeWidth={1.8} d="M20 20l-3.5-3.5" /></svg>
+          <input ref={searchRef} value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('noteSearch')} aria-label={t('noteSearch')}
+            onKeyDown={(e) => { if (e.key === 'Escape') { setQ(''); e.currentTarget.blur(); } }}
+            className={`${field} pl-10 pr-12`} />
+          {q ? (
+            <button type="button" onClick={() => { setQ(''); searchRef.current?.focus(); }} aria-label={t('noteSearchClear')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-6 h-6 grid place-items-center rounded-md bg-surface-2 text-subtle hover:text-text text-sm leading-none">×</button>
+          ) : (
+            <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded border border-border text-[10px] text-subtle font-mono hidden sm:block" aria-hidden>/</kbd>
+          )}
         </div>
 
         {inDeck.length === 0 ? (
@@ -312,6 +353,9 @@ export default function Notes() {
                         <span className="font-hanzi text-[28px] leading-none">{w.char}</span>
                         {w.pinyin && <span className="text-sm font-medium text-accent">{w.pinyin}</span>}
                       </div>
+                      {query && w.deck !== current && (
+                        <span className="mt-1.5 inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-surface-2 text-muted border border-border">{nameOf(decks.find((d) => d.id === w.deck) ?? cur)}</span>
+                      )}
                       {w.meaning && <p className="mt-1.5 text-sm font-medium line-clamp-2">{w.meaning}</p>}
                       {w.note && <p className="mt-1 text-xs text-muted leading-relaxed whitespace-pre-wrap line-clamp-2">{w.note}</p>}
                     </div>
