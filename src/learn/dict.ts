@@ -15,6 +15,8 @@ const get = (m: Table, k: string): Entry | undefined => m[k];
 
 /** Chữ tương thích (U+F900…, vd. 說 dán từ nguồn Hàn/Nhật) → chữ thống nhất, để tra từ điển và dữ liệu nét. */
 export const normalizeHan = (s: string) => s.normalize('NFC');
+/** Bỏ dấu thanh và dấu tiếng Việt để tìm không dấu: 'huǒ' → 'huo', 'bạn bè' → 'ban be'. */
+export const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 let dict: Promise<Table> | null = null;
 let words: Promise<Table> | null = null;

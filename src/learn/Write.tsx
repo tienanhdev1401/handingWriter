@@ -9,6 +9,7 @@ import { grade, bumpStreak } from './srs';
 import { judge, toScreen, type Pt } from './judge';
 import { beep } from './sound';
 import Hint from './Hint';
+import WordPicker from './WordPicker';
 
 const SIZE = 480; // canvas nội bộ; CSS co theo màn (min(100%, 360px) điện thoại, 480px từ lg)
 const cssRgb = (v: string) => `rgb(${getComputedStyle(document.documentElement).getPropertyValue(v).trim()})`;
@@ -41,7 +42,12 @@ export default function Write() {
   const { t } = useI18n();
   const all = useWords();
   const words = useStudyWords();
-  const [idx, setIdx] = useState(0);
+  // Mở từ Sổ từ: #/learn/write?w=朋友 → chọn đúng từ đó (nếu có trong bộ đang học)
+  const [idx, setIdx] = useState(() => {
+    const q = new URLSearchParams(location.hash.split('?')[1] ?? '').get('w');
+    const i = q ? words.findIndex((w) => w.char === q) : -1;
+    return i >= 0 ? i : 0;
+  });
   const word = words.length ? words[idx % words.length] : undefined;
   const chars = word ? [...word.char] : [];
   const [ci, setCi] = useState(0);           // chữ đang luyện trong từ nhiều chữ
@@ -155,6 +161,7 @@ export default function Write() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-5 p-6">
       <DeckPicker className="justify-center max-w-xl" />
+      <WordPicker words={words} index={idx % words.length} onPick={(i) => { setIdx(i); }} />
       <div className="w-full max-w-[360px] lg:max-w-[480px] text-xs lg:text-sm space-y-1.5">
         <div className="flex items-baseline justify-between gap-3">
           <span className="flex items-baseline gap-2 min-w-0">
