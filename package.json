@@ -18,7 +18,7 @@
     "release:win": "npm run build && electron-builder --win --x64 --publish always",
     "release:mac": "npm run build && electron-builder --mac --publish always",
     "android:sync": "npm run build && cap sync android",
-    "android:apk": "npm run android:sync && cd android && gradlew assembleDebug",
+    "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug",
     "android:open": "cap open android",
     "bump": "node scripts/bump-version.mjs"
   },
