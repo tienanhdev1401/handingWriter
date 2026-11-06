@@ -24,12 +24,12 @@ export function mergeBackups(local: Backup, remote: Backup | null): Backup {
 
   const words = new Map<string, Word>();
   for (const w of [...remote.words, ...local.words]) {
-    const p = words.get(w.char);
-    words.set(w.char, p ? pick(p, w) : w);
+    const p = words.get(w.id);
+    words.set(w.id, p ? pick(p, w) : w);
   }
   const out: Word[] = [];
-  for (const [char, w] of words) {
-    if (gone(`w:${char}`, w.updatedAt)) continue;
+  for (const [id, w] of words) {
+    if (gone(`w:${id}`, w.updatedAt)) continue;
     out.push(decks.has(w.deck) ? w : { ...w, deck: DEFAULT_DECK });
   }
   const deleted: Tombstone[] = [...dead].map(([key, at]) => ({ key, at }));
@@ -51,7 +51,7 @@ function pick(a: Word, b: Word): Word {
 export const sameBackup = (a: Backup, b: Backup | null) => !!b && canon(norm(a)) === canon(norm(b));
 const norm = (x: Backup) => ({
   decks: [...x.decks].sort((p, q) => p.id.localeCompare(q.id)),
-  words: [...x.words].sort((p, q) => p.char.localeCompare(q.char)),
+  words: [...x.words].sort((p, q) => p.id.localeCompare(q.id)),
   deleted: [...(x.deleted ?? [])].sort((p, q) => p.key.localeCompare(q.key)),
 });
 /** JSON với khoá object sắp xếp đệ quy — ổn định bất kể nguồn dữ liệu. */

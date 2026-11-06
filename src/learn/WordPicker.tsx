@@ -43,7 +43,7 @@ export default function WordPicker({ words, index, onPick }: { words: readonly W
           <div className="mt-2 max-h-64 overflow-y-auto grid grid-cols-4 sm:grid-cols-5 gap-1.5" role="listbox" aria-label={t('writePick')}>
             {list.length === 0 && <p className="col-span-full py-6 text-center text-xs text-subtle">{t('noteNoMatch')}</p>}
             {list.map(({ w, i }) => (
-              <button key={w.char} type="button" role="option" aria-selected={i === index} onClick={() => pick(i)} title={`${w.pinyin} · ${w.meaning}`}
+              <button key={w.id} type="button" role="option" aria-selected={i === index} onClick={() => pick(i)} title={`${w.pinyin} · ${w.meaning}`}
                 className={`flex flex-col items-center gap-0.5 px-1 py-2 rounded-lg border text-center transition-colors ${
                   i === index ? 'bg-text text-bg border-text' : 'bg-bg border-border text-text hover:border-accent'}`}>
                 <span className={`font-hanzi leading-none ${[...w.char].length > 2 ? 'text-base' : 'text-2xl'}`}>{w.char}</span>

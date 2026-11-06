@@ -34,7 +34,7 @@ export default function Shooter() {
   const [startBest] = useState(best);
   const [fx, setFx] = useState<'' | 'pop' | 'shake'>('');
 
-  const pool = filterScope(study, scope);
+  const pool = (() => { const seen = new Set<string>(); return filterScope(study, scope).filter((w) => { if (seen.has(w.char)) return false; seen.add(w.char); return true; }); })();
 
   useEffect(() => { if (phase === 'play' && lives <= 0) setPhase('over'); }, [phase, lives]);
   useEffect(() => {
@@ -55,12 +55,12 @@ export default function Shooter() {
   const start = () => { setScore(0); setLives(LIVES); setPhase('play'); next(); };
   const hit = (target: Word) => {
     setScore((s) => s + 1); setFx('pop'); beep('hit');
-    updateWord(target.char, grade(target, true)); bumpStreak();
+    updateWord(target.id, grade(target, true)); bumpStreak();
     next();
   };
   const lose = (target: Word) => {
     setLives((l) => l - 1); setFx('shake'); beep('miss');
-    updateWord(target.char, grade(target, false));
+    updateWord(target.id, grade(target, false));
   };
   const shoot = (f: Falling) => {
     if (phase !== 'play' || !round) return;

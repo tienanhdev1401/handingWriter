@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 
 export interface Deck { id: string; name: string; createdAt: number; updatedAt: number }
 export interface Word {
+  id: string;        // dinh danh on dinh; mot chu co the o nhieu bo nen khong dung chu lam khoa
   char: string;
   pinyin: string;
   meaning: string;
@@ -18,7 +19,7 @@ export type WordInput = Pick<Word, 'char' | 'pinyin' | 'meaning' | 'note'>;
 /** Bia mộ: thứ đã xóa, để máy khác (và mây) không hồi sinh. key = 'w:<chữ>' | 'd:<deckId>'. */
 export interface Tombstone { key: string; at: number }
 export interface Backup { decks: Deck[]; words: Word[]; deleted: Tombstone[] }
-export const wKey = (char: string) => `w:${char}`;
+export const wKey = (id: string) => `w:${id}`;
 export const dKey = (id: string) => `d:${id}`;
 
 /** Bộ mặc định luôn tồn tại, không xóa được; tên hiển thị qua i18n khi name rỗng. */
@@ -38,10 +39,11 @@ function normWord(raw: unknown): Word | null {
   const w = raw as Partial<Word> | null;
   if (!w || typeof w.char !== 'string' || !isHanzi(w.char)) return null;
   return {
+    id: str(w.id) || w.char, // du lieu cu chua co id -> dung chu (khi do moi chu con la duy nhat)
     char: w.char, pinyin: str(w.pinyin), meaning: str(w.meaning), note: str(w.note),
     createdAt: num(w.createdAt), box: Math.min(4, Math.max(0, Math.floor(num(w.box)))),
     due: num(w.due), reviews: num(w.reviews), lapses: num(w.lapses),
-    deck: str(w.deck) || DEFAULT_DECK, // dữ liệu cũ chưa có bộ → Sổ chung
+    deck: str(w.deck) || DEFAULT_DECK,
     updatedAt: num(w.updatedAt) || num(w.createdAt),
   };
 }
@@ -54,7 +56,7 @@ export function parseWords(raw: unknown): Word[] {
   if (!Array.isArray(raw)) return [];
   const seen = new Set<string>();
   const out: Word[] = [];
-  for (const r of raw) { const w = normWord(r); if (w && !seen.has(w.char)) { seen.add(w.char); out.push(w); } }
+  for (const r of raw) { const w = normWord(r); if (w && !seen.has(w.id)) { seen.add(w.id); out.push(w); } }
   return out;
 }
 export function parseDecks(raw: unknown): Deck[] {
@@ -138,7 +140,7 @@ export function removeDeck(id: string, mode: 'move' | 'delete' = 'move') {
   const words = mode === 'delete'
     ? state.words.filter((w) => w.deck !== id)
     : state.words.map((w) => (w.deck === id ? { ...w, deck: DEFAULT_DECK, updatedAt: t } : w));
-  commit({ decks: state.decks.filter((d) => d.id !== id), words, deleted: bury([dKey(id), ...(mode === 'delete' ? inside.map((w) => wKey(w.char)) : [])]) });
+  commit({ decks: state.decks.filter((d) => d.id !== id), words, deleted: bury([dKey(id), ...(mode === 'delete' ? inside.map((w) => wKey(w.id)) : [])]) });
 }
 export const setCurrentDeck = (id: string) => commit({ current: id });
 
@@ -153,25 +155,25 @@ export function toggleDeck(id: string) {
 }
 
 // ── Từ ──
-const fresh = (w: WordInput, deck: string): Word => ({ ...w, createdAt: now(), box: 0, due: 0, reviews: 0, lapses: 0, deck, updatedAt: now() });
+const fresh = (w: WordInput, deck: string): Word => ({ id: uid(), ...w, createdAt: now(), box: 0, due: 0, reviews: 0, lapses: 0, deck, updatedAt: now() });
 
 /** Thêm nhiều từ vào một bộ (mặc định: bộ hiện tại), bỏ qua chữ đã có ở bất kỳ bộ nào. Trả về số từ mới. */
 // ponytail: mỗi chữ chỉ nằm trong một bộ để tiến độ ôn là duy nhất; muốn một chữ ở nhiều bộ thì tách Word ↔ membership.
 export function addMany(list: WordInput[], deck = state.current): number {
-  const have = new Set(state.words.map((w) => w.char));
+  const inDeck = new Set(state.words.filter((w) => w.deck === deck).map((w) => w.char));
   const add: Word[] = [];
   for (const w of list) {
-    const char = w.char.normalize('NFC'); // chữ tương thích U+F900… → chữ thống nhất
-    if (isHanzi(char) && !have.has(char)) { have.add(char); add.push(fresh({ ...w, char }, deck)); }
+    const char = w.char.normalize('NFC'); // chu tuong thich U+F900... -> chu thong nhat
+    if (isHanzi(char) && !inDeck.has(char)) { inDeck.add(char); add.push(fresh({ ...w, char }, deck)); }
   }
-  if (add.length) commit({ words: [...state.words, ...add], deleted: unbury(add.map((w) => wKey(w.char))) });
+  if (add.length) commit({ words: [...state.words, ...add], deleted: unbury(add.map((w) => wKey(w.id))) });
   return add.length;
 }
 export const addWord = (w: WordInput, deck?: string) => addMany([w], deck) === 1;
-export const updateWord = (char: string, patch: Partial<Omit<Word, 'char'>>) =>
-  commit({ words: state.words.map((w) => (w.char === char ? { ...w, ...patch, updatedAt: now() } : w)) });
-export const removeWord = (char: string) =>
-  commit({ words: state.words.filter((w) => w.char !== char), deleted: bury([wKey(char)]) });
+export const updateWord = (id: string, patch: Partial<Omit<Word, 'id'>>) =>
+  commit({ words: state.words.map((w) => (w.id === id ? { ...w, ...patch, updatedAt: now() } : w)) });
+export const removeWord = (id: string) =>
+  commit({ words: state.words.filter((w) => w.id !== id), deleted: bury([wKey(id)]) });
 
 // ── Xuất / nhập ──
 export const exportData = (): Backup => ({ decks: state.decks, words: state.words, deleted: state.deleted });
@@ -190,13 +192,13 @@ export function importWords(raw: unknown): number {
   newDecks.forEach((d) => haveDeck.add(d.id));
   const t = now();
   const fixed = list.map((w) => ({ ...(haveDeck.has(w.deck) && (isBackup || w.deck !== DEFAULT_DECK) ? w : { ...w, deck: state.current }), updatedAt: t }));
-  const have = new Set(state.words.map((w) => w.char));
-  const incoming = new Map(fixed.map((w) => [w.char, w]));
-  const added = fixed.filter((w) => !have.has(w.char));
+  const have = new Set(state.words.map((w) => w.id));
+  const incoming = new Map(fixed.map((w) => [w.id, w]));
+  const added = fixed.filter((w) => !have.has(w.id));
   commit({
     decks: [...state.decks, ...newDecks.map((d) => ({ ...d, updatedAt: t }))],
-    words: [...state.words.map((w) => incoming.get(w.char) ?? w), ...added],
-    deleted: unbury([...fixed.map((w) => wKey(w.char)), ...newDecks.map((d) => dKey(d.id))]),
+    words: [...state.words.map((w) => incoming.get(w.id) ?? w), ...added],
+    deleted: unbury([...fixed.map((w) => wKey(w.id)), ...newDecks.map((d) => dKey(d.id))]),
   });
   return added.length;
 }

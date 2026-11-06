@@ -198,7 +198,10 @@ const vi = {
   deckEmptyTitle: 'Bộ "{d}" chưa có từ',
   deckStudyEmpty: 'Các bộ đang chọn chưa có từ nào.',
   noteAddTo: 'Thêm vào {d}',
-  noteErrDupIn: 'Chữ này đã có trong bộ "{d}".',
+  noteErrDupSameDeck: 'Chữ này đã có trong bộ này rồi.',
+  noteDupWarn: 'Chữ "{c}" đã có ở bộ: {d}. Vẫn muốn thêm vào bộ này?',
+  noteDupAdd: 'Vẫn thêm vào {d}',
+  deckHasChar: 'đã có chữ này',
   hskHint: 'Mỗi cấp HSK được nạp vào bộ riêng.',
 } as const;
 
@@ -387,7 +390,10 @@ const en: Record<Key, string> = {
   deckEmptyTitle: 'Deck "{d}" has no words yet',
   deckStudyEmpty: 'The selected decks have no words yet.',
   noteAddTo: 'Add to {d}',
-  noteErrDupIn: 'This character is already in deck "{d}".',
+  noteErrDupSameDeck: 'This character is already in this deck.',
+  noteDupWarn: '"{c}" is already in: {d}. Add it to this deck too?',
+  noteDupAdd: 'Add to {d} anyway',
+  deckHasChar: 'has this character',
   hskHint: 'Each HSK level loads into its own deck.',
 };
 

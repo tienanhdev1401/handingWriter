@@ -43,7 +43,8 @@ export default function Notes() {
   const [shake, setShake] = useState(false);
   const [saved, setSaved] = useState(false);
   const charInput = useRef<HTMLInputElement>(null);
-  const editing = selected ? words.find((w) => w.char === selected) ?? null : null;
+  const editing = selected ? words.find((w) => w.id === selected) ?? null : null;
+  const [dup, setDup] = useState<string[] | null>(null); // bộ đã chứa chữ này (cảnh báo khi thêm sang bộ khác)
   const selectedRef = useRef(selected); selectedRef.current = selected;
 
   // ── danh sách ──
@@ -99,39 +100,46 @@ export default function Notes() {
     const w = editingRef.current;
     if (!w || same(form, toForm(w))) return;
     const id = setTimeout(() => {
-      updateWord(w.char, { pinyin: form.pinyin.trim(), meaning: form.meaning.trim(), note: form.note.trim(), deck: form.deck });
+      updateWord(w.id, { pinyin: form.pinyin.trim(), meaning: form.meaning.trim(), note: form.note.trim(), deck: form.deck });
       setSaved(true);
     }, 600);
     return () => clearTimeout(id);
   }, [form, selected]);
 
   const resetRef = useRef<() => void>(() => {});
-  const reset = () => { setSelected(null); setForm({ ...EMPTY, deck: current }); auto.current = { pinyin: true, meaning: true }; setErr(''); };
+  const reset = () => { setSelected(null); setForm({ ...EMPTY, deck: current }); auto.current = { pinyin: true, meaning: true }; setErr(''); setDup(null); };
   resetRef.current = reset;
-  const select = (w: Word) => { setSelected(w.char); setForm(toForm(w)); setErr(''); charInput.current?.closest('aside')?.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const select = (w: Word) => { setSelected(w.id); setForm(toForm(w)); setErr(''); setDup(null); charInput.current?.closest('aside')?.scrollTo({ top: 0, behavior: 'smooth' }); };
   const set = (k: keyof Form) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const v = e.target.value;
     if (!selected && (k === 'pinyin' || k === 'meaning')) auto.current[k] = v.trim() === '';
     setForm((f) => ({ ...f, [k]: v }));
-    setErr('');
+    setErr(''); setDup(null);
   };
   const fail = (m: string) => { setErr(m); setShake(true); setTimeout(() => setShake(false), 350); };
 
+  // Thực sự thêm từ (đã qua kiểm tra). Một chữ được phép ở nhiều bộ.
+  const doAdd = () => {
+    addWord({ char, pinyin: form.pinyin.trim(), meaning: form.meaning.trim(), note: form.note.trim() }, form.deck);
+    if (form.deck !== current) setCurrentDeck(form.deck);
+    setForm({ ...EMPTY, deck: form.deck });
+    auto.current = { pinyin: true, meaning: true };
+    setDup(null);
+    setMsg(t('noteAdded', { c: char }));
+    charInput.current?.focus();
+  };
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (selected) { reset(); return; }                                 // chế độ sửa: nút = Xong
     if (!isHanzi(char)) return fail(t('noteErrChar'));
-    if (!addWord({ char, pinyin: form.pinyin.trim(), meaning: form.meaning.trim(), note: form.note.trim() }, form.deck)) {
-      const owner = decks.find((d) => d.id === words.find((w) => w.char === char)?.deck);
-      return fail(t('noteErrDupIn', { d: owner ? nameOf(owner) : '?' }));
+    const sameChar = words.filter((w) => w.char === char);
+    if (sameChar.some((w) => w.deck === form.deck)) return fail(t('noteErrDupSameDeck')); // trùng trong cùng bộ → chặn
+    if (sameChar.length > 0 && !dup) {                                  // đã có ở bộ khác → cảnh báo, không chặn
+      return setDup([...new Set(sameChar.map((w) => nameOf(decks.find((d) => d.id === w.deck) ?? cur)))]);
     }
-    if (form.deck !== current) setCurrentDeck(form.deck);
-    setForm({ ...EMPTY, deck: form.deck });
-    auto.current = { pinyin: true, meaning: true };
-    setMsg(t('noteAdded', { c: char }));
-    charInput.current?.focus();
+    doAdd();
   };
-  const remove = () => { if (!editing) return; const c = editing.char; removeWord(c); reset(); setMsg(t('noteDeleted', { c })); };
+  const remove = () => { if (!editing) return; const c = editing.char; removeWord(editing.id); reset(); setMsg(t('noteDeleted', { c })); };
 
   const loadLevel = async (l: HskLevel) => {
     setBusy(true);
@@ -159,11 +167,13 @@ export default function Notes() {
     setMsg(mode === 'delete' && n ? t('deckDeletedWithWords', { d: name, n }) : t('deckDeleted', { d: name }));
   };
 
+  // Bộ đã chứa chữ này (trừ chính từ đang sửa) → không cho chọn, tránh trùng chữ trong một bộ.
+  const takenDecks = new Set(words.filter((w) => w.char === char && w.id !== editing?.id).map((w) => w.deck));
   const deckSelect = (
     <label className="block space-y-1.5">
       <span className="text-[11px] font-medium text-muted">{t('deckMove')}</span>
       <select value={form.deck} onChange={set('deck')} className={field}>
-        {decks.map((d) => <option key={d.id} value={d.id}>{nameOf(d)}</option>)}
+        {decks.map((d) => <option key={d.id} value={d.id} disabled={takenDecks.has(d.id) && d.id !== form.deck}>{nameOf(d)}{takenDecks.has(d.id) && d.id !== form.deck ? ` · ${t('deckHasChar')}` : ''}</option>)}
       </select>
     </label>
   );
@@ -227,7 +237,18 @@ export default function Notes() {
           </label>
           {decks.length > 1 && deckSelect}
 
-          <div className="min-h-[18px]" aria-live="polite">{err && <span className="text-xs text-accent font-medium">{err}</span>}</div>
+          <div className="min-h-[18px]" aria-live="polite">
+            {err && <span className="text-xs text-accent font-medium">{err}</span>}
+          </div>
+          {dup && (
+            <div role="alertdialog" className="rounded-xl bg-amber-500/10 border border-amber-500/40 p-3 space-y-2 animate-in">
+              <p className="text-xs text-text leading-relaxed">{t('noteDupWarn', { c: char, d: dup.join(', ') })}</p>
+              <div className="flex gap-2">
+                <button type="button" onClick={doAdd} className="px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white bg-accent hover:bg-accent-h">{t('noteDupAdd', { d: nameOf(decks.find((d) => d.id === form.deck) ?? cur) })}</button>
+                <button type="button" onClick={() => setDup(null)} className="px-3 py-1.5 rounded-lg text-[11px] font-medium text-muted hover:text-text">{t('noteCancel')}</button>
+              </div>
+            </div>
+          )}
 
           {editing ? (
             <div className="flex gap-2">
@@ -351,9 +372,9 @@ export default function Notes() {
         ) : (
           <ul key={showAll ? ALL : current} className="stagger grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {inDeck.map((w, i) => {
-              const on = selected === w.char;
+              const on = selected === w.id;
               return (
-                <li key={w.char} style={{ '--i': Math.min(i, 12) } as React.CSSProperties}>
+                <li key={w.id} style={{ '--i': Math.min(i, 12) } as React.CSSProperties}>
                   <button type="button" onClick={() => select(w)} onDoubleClick={() => select(w)} aria-pressed={on}
                     title={t('noteOpenHint')}
                     className={`group relative w-full text-left flex gap-4 p-3.5 rounded-2xl bg-surface border transition-all duration-200 hover:shadow-[0_12px_28px_-14px_rgb(0_0_0/0.3)] hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${

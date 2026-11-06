@@ -8,7 +8,7 @@ import type { Word } from './store';
 import { mergeBackups, sameBackup, canon } from './merge';
 
 const ok = (c: boolean, m: string) => { if (!c) throw new Error('FAIL: ' + m); };
-const mk = (char: string, i: number): Word => ({ char, pinyin: '', meaning: String(i), note: '', createdAt: 0, box: 0, due: 0, reviews: 0, lapses: 0, deck: 'default', updatedAt: 0 });
+const mk = (char: string, i: number): Word => ({ id: char, char, pinyin: '', meaning: String(i), note: '', createdAt: 0, box: 0, due: 0, reviews: 0, lapses: 0, deck: 'default', updatedAt: 0 });
 const words = ['一', '二', '三', '四', '五'].map(mk);
 let seed = 1;
 const rng = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -62,7 +62,10 @@ const shop = Store.addDeck('Đi mua sắm');
 ok(Store.getCurrentDeck() === shop, 'tạo bộ → thành bộ hiện tại');
 ok(Store.addWord({ char: '买', pinyin: 'mǎi', meaning: 'to buy', note: '' }), 'thêm vào bộ hiện tại');
 ok(Store.getWords().find((w) => w.char === '买')?.deck === shop, 'từ mới thuộc bộ Đi mua sắm');
-ok(!Store.addWord({ char: '水', pinyin: '', meaning: '', note: '' }), 'chữ đã có ở bộ khác → từ chối');
+ok(Store.addWord({ char: '水', pinyin: '', meaning: '', note: '' }, shop), 'cùng chữ, bộ khác → thêm được (đa bộ)');
+ok(Store.getWords().filter((w) => w.char === '水').length === 2, '水 ở 2 bộ');
+ok(!Store.addWord({ char: '水', pinyin: '', meaning: '', note: '' }, shop), 'cùng chữ, CÙNG bộ → từ chối');
+Store.removeWord(Store.getWords().find((w) => w.char === '水' && w.deck === shop)!.id); // dọn để các test sau giữ nguyên trạng thái
 ok(Store.getStudyWords().length === 2 && Store.getSelection() === null, 'mặc định học tất cả');
 Store.toggleDeck(shop);
 ok(Store.getStudyWords().length === 1 && Store.getStudyWords()[0].char === '买', 'chọn 1 bộ → chỉ từ trong bộ');
@@ -95,7 +98,7 @@ ok(Store.getWords().some((w) => w.char === '下邊' && w.pinyin === 'xià bian')
 
 // ── merge (đồng bộ mây) ──
 const D = (id: string, name: string, up = 0) => ({ id, name, createdAt: 0, updatedAt: up });
-const W = (char: string, reviews: number, due: number, deck = 'default', note = '', up = 0): Word => ({ char, pinyin: '', meaning: '', note, createdAt: 0, box: 0, due, reviews, lapses: 0, deck, updatedAt: up });
+const W = (char: string, reviews: number, due: number, deck = 'default', note = '', up = 0, id = char): Word => ({ id, char, pinyin: '', meaning: '', note, createdAt: 0, box: 0, due, reviews, lapses: 0, deck, updatedAt: up });
 const T = (key: string, at: number) => ({ key, at });
 const local = { decks: [D('default', ''), D('shop', 'Mua sắm')], words: [W('買', 3, 100, 'shop', 'local'), W('學', 0, 0)], deleted: [] };
 const remote = { decks: [D('default', ''), D('shop', ''), D('hsk', 'HSK 1')], words: [W('買', 5, 50, 'shop', 'remote'), W('水', 2, 10, 'hsk')], deleted: [] };
@@ -133,17 +136,22 @@ ok(!sameBackup(dk, dkDel) && sameBackup(mergeBackups(dk, dkDel), dkDel), 'merge 
 
 // ── store: xóa có tombstone, thêm lại gỡ tombstone ──
 const g2 = Store.addDeck('G2');
-ok(Store.addWord({ char: '九', pinyin: '', meaning: '', note: '' }, g2), 'thêm 九 vào bộ G2');
+Store.addWord({ char: '九', pinyin: '', meaning: '', note: '' }, g2);
+const nine1 = Store.getWords().find((w) => w.char === '九' && w.deck === g2)!.id;
+ok(!!nine1, 'thêm 九 vào bộ G2');
 Store.removeDeck(g2, 'delete');
 ok(!Store.getWords().some((w) => w.char === '九'), "removeDeck 'delete' → từ bên trong biến mất");
-ok(Store.exportData().deleted.some((x) => x.key === 'w:九') && Store.exportData().deleted.some((x) => x.key === 'd:' + g2), 'ghi tombstone cho cả bộ lẫn từ');
-ok(Store.addWord({ char: '九', pinyin: '', meaning: '', note: '' }), 'thêm lại 九 được');
-ok(!Store.exportData().deleted.some((x) => x.key === 'w:九'), 'thêm lại → gỡ tombstone của từ');
-Store.removeWord('九');
-ok(Store.exportData().deleted.some((x) => x.key === 'w:九'), 'removeWord → tombstone');
-const before = Store.getWords().find((w) => w.char === '买')!.updatedAt;
-Store.updateWord('买', { note: 'x' });
-ok(Store.getWords().find((w) => w.char === '买')!.updatedAt > before, 'updateWord → updatedAt tăng');
+ok(Store.exportData().deleted.some((x) => x.key === 'w:' + nine1) && Store.exportData().deleted.some((x) => x.key === 'd:' + g2), 'ghi tombstone cho cả bộ lẫn từ');
+Store.addWord({ char: '九', pinyin: '', meaning: '', note: '' });
+const nine2 = Store.getWords().find((w) => w.char === '九')!.id;
+ok(!!nine2 && nine2 !== nine1, 'thêm lại 九 được (id mới → không bị tombstone cũ giết)');
+ok(!Store.exportData().deleted.some((x) => x.key === 'w:' + nine2), 'từ mới không có tombstone');
+Store.removeWord(nine2);
+ok(Store.exportData().deleted.some((x) => x.key === 'w:' + nine2), 'removeWord → tombstone');
+const buyId = Store.getWords().find((w) => w.char === '买')!.id;
+const before = Store.getWords().find((w) => w.id === buyId)!.updatedAt;
+Store.updateWord(buyId, { note: 'x' });
+ok(Store.getWords().find((w) => w.id === buyId)!.updatedAt > before, 'updateWord → updatedAt tăng');
 
 // ── sameBackup bất chấp thứ tự khoá (Firestore trả khoá theo thứ tự khác → từng gây ping-pong 2 máy) ──
 const reorder = (o: Record<string, unknown>) => Object.fromEntries(Object.keys(o).sort().reverse().map((k) => [k, o[k]]));
@@ -166,11 +174,29 @@ ok(total() === t0 && unsorted() === u0, 'xóa bộ A (xóa cả từ) → Tất 
 const cB = Store.addDeck('B');
 ['戊', '己', '庚', '辛', '壬'].forEach((c) => Store.addWord({ char: c, pinyin: '', meaning: '', note: '' }, cB));
 ok(inD(cB) === 5 && total() === t0 + 5, 'bộ B 5 chữ → Tất cả +5');
-Store.removeWord('壬');
+Store.removeWord(Store.getWords().find((w) => w.char === '壬')!.id);
 ok(inD(cB) === 4 && total() === t0 + 4, 'xóa 1 chữ trong B → B=4, Tất cả +4');
 Store.removeDeck(cB, 'move');
 ok(unsorted() === u0 + 4 && total() === t0 + 4, 'xóa bộ B (chuyển từ) → 4 từ sang Chưa phân loại, Tất cả không đổi');
-['戊', '己', '庚', '辛'].forEach((c) => Store.removeWord(c));
+['戊', '己', '庚', '辛'].forEach((c) => { const w = Store.getWords().find((x) => x.char === c); if (w) Store.removeWord(w.id); });
 ok(unsorted() === u0 && total() === t0, 'xóa 4 từ đó → về như cũ');
+
+// ── da bo: mot chu o nhieu bo, tien do rieng ──
+Store.replaceAll({ decks: [], words: [], deleted: [] });
+const dX = Store.addDeck('X'); const dY = Store.addDeck('Y');
+ok(Store.addWord({ char: '一', pinyin: '', meaning: 'nghia X', note: '' }, dX), 'thêm 一 vào X');
+ok(Store.addWord({ char: '一', pinyin: '', meaning: 'nghia Y', note: '' }, dY), 'thêm 一 vào Y (đa bộ)');
+const oneX = Store.getWords().find((w) => w.char === '一' && w.deck === dX)!;
+const oneY = Store.getWords().find((w) => w.char === '一' && w.deck === dY)!;
+ok(oneX.id !== oneY.id && oneX.meaning === 'nghia X' && oneY.meaning === 'nghia Y', '一 ở 2 bộ với id + nghĩa riêng');
+Store.updateWord(oneX.id, { reviews: 3 });
+ok(Store.getWords().find((w) => w.id === oneX.id)!.reviews === 3 && Store.getWords().find((w) => w.id === oneY.id)!.reviews === 0, 'ôn ở bộ X không ảnh hưởng bộ Y');
+Store.removeWord(oneX.id);
+ok(Store.getWords().filter((w) => w.char === '一').length === 1 && Store.getWords()[0].deck === dY, 'xóa 一 ở X → vẫn còn 一 ở Y');
+// merge: cung chu khac id -> ca hai song
+const mAB = mergeBackups(
+  { decks: [D('default', '')], words: [W('雨', 0, 0, 'a', '', 1, 'ida')], deleted: [] },
+  { decks: [D('default', '')], words: [W('雨', 0, 0, 'b', '', 1, 'idb')], deleted: [] });
+ok(mAB.words.length === 2, 'merge: cùng chữ khác id (2 bộ) → giữ cả hai');
 
 console.log('learn.check OK');

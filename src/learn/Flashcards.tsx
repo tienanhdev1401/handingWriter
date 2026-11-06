@@ -32,7 +32,7 @@ export default function Flashcards() {
   const go = (d: number) => { if (n) setPos((p) => (p + d + n) % n); setFlipped(false); };
   const rate = (ok: boolean) => {
     if (!w || !flipped) return;
-    updateWord(w.char, grade(w, ok));
+    updateWord(w.id, grade(w, ok));
     bumpStreak();
     setFlipped(false);
     setPos((p) => (n ? (p + 1) % n : 0));

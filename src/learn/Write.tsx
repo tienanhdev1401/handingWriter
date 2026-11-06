@@ -138,7 +138,7 @@ export default function Write() {
       const next = done + 1;
       setDone(next);
       if (next >= n) {
-        if (lastChar) { updateWord(word.char, grade(word, misses < 3)); bumpStreak(); }
+        if (lastChar) { updateWord(word.id, grade(word, misses < 3)); bumpStreak(); }
         else setTimeout(() => setCi((c) => c + 1), 600); // sang chữ tiếp theo trong từ
       }
     } else {
