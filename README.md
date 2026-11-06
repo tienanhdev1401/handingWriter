@@ -12,6 +12,7 @@ Dữ liệu nét lấy từ [Make Me a Hanzi](https://github.com/skishore/makeme
 
 **Học tập**
 - Sổ từ theo bộ (chủ đề). Gõ chữ hoặc từ, giản thể hay phồn thể, pinyin và nghĩa tự điền. Nạp sẵn HSK 1–3
+- Một chữ có thể nằm ở nhiều bộ với nghĩa riêng; kéo thả (hoặc phím ↑ ↓ Home End) để sắp xếp thẻ trong bộ
 - Lật thẻ với lặp lại ngắt quãng (Leitner), lọc Cần ôn / Mới
 - Bắn chữ: chữ rơi, bấm chữ khớp nghĩa hoặc ngược lại
 - Tập viết: vẽ từng nét lên chữ mờ, chấm theo dữ liệu nét chuẩn; chế độ Viết ẩn để viết theo trí nhớ

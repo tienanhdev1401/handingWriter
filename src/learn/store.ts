@@ -13,6 +13,7 @@ export interface Word {
   reviews: number;
   lapses: number;
   deck: string;    // Deck.id
+  order: number;   // vị trí hiển thị (nhỏ → trước); từ cũ = createdAt. Kéo thả chỉ đổi số này của một từ
   updatedAt: number; // ms — hợp nhất đa thiết bị: bản mới hơn thắng
 }
 export type WordInput = Pick<Word, 'char' | 'pinyin' | 'meaning' | 'note'>;
@@ -44,6 +45,7 @@ function normWord(raw: unknown): Word | null {
     createdAt: num(w.createdAt), box: Math.min(4, Math.max(0, Math.floor(num(w.box)))),
     due: num(w.due), reviews: num(w.reviews), lapses: num(w.lapses),
     deck: str(w.deck) || DEFAULT_DECK,
+    order: typeof w.order === 'number' && Number.isFinite(w.order) ? w.order : num(w.createdAt),
     updatedAt: num(w.updatedAt) || num(w.createdAt),
   };
 }
@@ -77,7 +79,8 @@ interface State { decks: Deck[]; words: Word[]; deleted: Tombstone[]; sel: strin
 /** Chuẩn hoá bất biến: từ trỏ tới bộ không tồn tại → Sổ chung; chọn rỗng = tất cả. */
 function build(decks: Deck[], words: Word[], deleted: Tombstone[], sel: string[] | null, current: string): State {
   const ids = new Set(decks.map((d) => d.id));
-  const ws = words.map((w) => (ids.has(w.deck) ? w : { ...w, deck: DEFAULT_DECK }));
+  // sort ổn định: cùng order (từ cũ nhập cùng lúc) giữ thứ tự đã lưu
+  const ws = words.map((w) => (ids.has(w.deck) ? w : { ...w, deck: DEFAULT_DECK })).sort((a, b) => a.order - b.order);
   let s = sel ? sel.filter((id) => ids.has(id)) : null;
   if (s && s.length === 0) s = null;
   const set = s ? new Set(s) : null;
@@ -155,16 +158,16 @@ export function toggleDeck(id: string) {
 }
 
 // ── Từ ──
-const fresh = (w: WordInput, deck: string): Word => ({ id: uid(), ...w, createdAt: now(), box: 0, due: 0, reviews: 0, lapses: 0, deck, updatedAt: now() });
+const fresh = (w: WordInput, deck: string, order: number): Word => ({ id: uid(), ...w, createdAt: now(), box: 0, due: 0, reviews: 0, lapses: 0, deck, order, updatedAt: now() });
 
-/** Thêm nhiều từ vào một bộ (mặc định: bộ hiện tại), bỏ qua chữ đã có ở bất kỳ bộ nào. Trả về số từ mới. */
-// ponytail: mỗi chữ chỉ nằm trong một bộ để tiến độ ôn là duy nhất; muốn một chữ ở nhiều bộ thì tách Word ↔ membership.
+/** Thêm nhiều từ vào một bộ (mặc định: bộ hiện tại), bỏ qua chữ đã có trong bộ đó. Trả về số từ mới. */
 export function addMany(list: WordInput[], deck = state.current): number {
   const inDeck = new Set(state.words.filter((w) => w.deck === deck).map((w) => w.char));
   const add: Word[] = [];
+  const t = now();
   for (const w of list) {
     const char = w.char.normalize('NFC'); // chu tuong thich U+F900... -> chu thong nhat
-    if (isHanzi(char) && !inDeck.has(char)) { inDeck.add(char); add.push(fresh({ ...w, char }, deck)); }
+    if (isHanzi(char) && !inDeck.has(char)) { inDeck.add(char); add.push(fresh({ ...w, char }, deck, t + add.length)); } // t+i: giữ thứ tự nhập
   }
   if (add.length) commit({ words: [...state.words, ...add], deleted: unbury(add.map((w) => wKey(w.id))) });
   return add.length;
@@ -174,6 +177,25 @@ export const updateWord = (id: string, patch: Partial<Omit<Word, 'id'>>) =>
   commit({ words: state.words.map((w) => (w.id === id ? { ...w, ...patch, updatedAt: now() } : w)) });
 export const removeWord = (id: string) =>
   commit({ words: state.words.filter((w) => w.id !== id), deleted: bury([wKey(id)]) });
+/**
+ * Đưa từ `id` vào vị trí của từ `targetId` (cùng bộ): kéo lên → đứng trước nó, kéo xuống → đứng sau nó.
+ * Chỉ đổi order của một từ (trung điểm hai hàng xóm) để đồng bộ không đụng từ khác.
+ * ponytail: hết khoảng trống (kéo qua lại cùng chỗ ~50 lần) → đánh số lại cả bộ, cách nhau 1024.
+ */
+export function moveWord(id: string, targetId: string) {
+  const a = state.words.find((w) => w.id === id), b = state.words.find((w) => w.id === targetId);
+  if (!a || !b || a === b || a.deck !== b.deck) return;
+  const list = state.words.filter((w) => w.deck === a.deck && w.id !== id);
+  const to = list.indexOf(b) + (state.words.indexOf(a) > state.words.indexOf(b) ? 0 : 1); // so chỉ số, không so order: từ cũ có thể trùng order
+  const prev = list[to - 1], next = list[to], t = now();
+  const order = prev && next ? (prev.order + next.order) / 2 : prev ? prev.order + 1 : next ? next.order - 1 : a.order;
+  if ((!prev || prev.order < order) && (!next || order < next.order)) {
+    return commit({ words: state.words.map((w) => (w.id === id ? { ...w, order, updatedAt: t } : w)) });
+  }
+  list.splice(to, 0, a);
+  const re = new Map(list.map((w, i) => [w.id, i * 1024]));
+  commit({ words: state.words.map((w) => (re.has(w.id) ? { ...w, order: re.get(w.id)!, updatedAt: t } : w)) });
+}
 
 // ── Xuất / nhập ──
 export const exportData = (): Backup => ({ decks: state.decks, words: state.words, deleted: state.deleted });

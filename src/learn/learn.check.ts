@@ -8,7 +8,7 @@ import type { Word } from './store';
 import { mergeBackups, sameBackup, canon } from './merge';
 
 const ok = (c: boolean, m: string) => { if (!c) throw new Error('FAIL: ' + m); };
-const mk = (char: string, i: number): Word => ({ id: char, char, pinyin: '', meaning: String(i), note: '', createdAt: 0, box: 0, due: 0, reviews: 0, lapses: 0, deck: 'default', updatedAt: 0 });
+const mk = (char: string, i: number): Word => ({ id: char, char, pinyin: '', meaning: String(i), note: '', createdAt: 0, box: 0, due: 0, reviews: 0, lapses: 0, deck: 'default', order: 0, updatedAt: 0 });
 const words = ['一', '二', '三', '四', '五'].map(mk);
 let seed = 1;
 const rng = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -98,7 +98,7 @@ ok(Store.getWords().some((w) => w.char === '下邊' && w.pinyin === 'xià bian')
 
 // ── merge (đồng bộ mây) ──
 const D = (id: string, name: string, up = 0) => ({ id, name, createdAt: 0, updatedAt: up });
-const W = (char: string, reviews: number, due: number, deck = 'default', note = '', up = 0, id = char): Word => ({ id, char, pinyin: '', meaning: '', note, createdAt: 0, box: 0, due, reviews, lapses: 0, deck, updatedAt: up });
+const W = (char: string, reviews: number, due: number, deck = 'default', note = '', up = 0, id = char): Word => ({ id, char, pinyin: '', meaning: '', note, createdAt: 0, box: 0, due, reviews, lapses: 0, deck, order: 0, updatedAt: up });
 const T = (key: string, at: number) => ({ key, at });
 const local = { decks: [D('default', ''), D('shop', 'Mua sắm')], words: [W('買', 3, 100, 'shop', 'local'), W('學', 0, 0)], deleted: [] };
 const remote = { decks: [D('default', ''), D('shop', ''), D('hsk', 'HSK 1')], words: [W('買', 5, 50, 'shop', 'remote'), W('水', 2, 10, 'hsk')], deleted: [] };
@@ -198,5 +198,28 @@ const mAB = mergeBackups(
   { decks: [D('default', '')], words: [W('雨', 0, 0, 'a', '', 1, 'ida')], deleted: [] },
   { decks: [D('default', '')], words: [W('雨', 0, 0, 'b', '', 1, 'idb')], deleted: [] });
 ok(mAB.words.length === 2, 'merge: cùng chữ khác id (2 bộ) → giữ cả hai');
+
+// ── kéo sắp xếp (order) ──
+Store.replaceAll({ decks: [], words: [], deleted: [] });
+const inp = (c: string) => ({ char: c, pinyin: '', meaning: '', note: '' });
+Store.addMany(['甲', '乙', '丙', '丁', '戊'].map(inp));
+const seq = () => Store.getWords().map((w) => w.char).join('');
+const idOf = (c: string) => Store.getWords().find((w) => w.char === c)!.id;
+ok(seq() === '甲乙丙丁戊', 'thêm hàng loạt giữ thứ tự nhập');
+Store.moveWord(idOf('戊'), idOf('乙'));
+ok(seq() === '甲戊乙丙丁', 'kéo 戊 (cuối) lên chỗ 乙 → chiếm vị trí 乙');
+Store.moveWord(idOf('甲'), idOf('丁'));
+ok(seq() === '戊乙丙丁甲', 'kéo 甲 (đầu) xuống chỗ 丁 → đứng sau 丁');
+const upBefore = Store.getWords().find((w) => w.char === '乙')!.updatedAt;
+Store.moveWord(idOf('甲'), idOf('戊'));
+ok(seq() === '甲戊乙丙丁' && Store.getWords().find((w) => w.char === '乙')!.updatedAt === upBefore, 'về đầu; từ khác không bị đụng updatedAt');
+for (let i = 0; i < 120; i++) Store.moveWord(idOf('甲'), idOf('戊')); // qua lại cùng chỗ → cạn khoảng trống → đánh số lại
+const ords = Store.getWords().map((w) => w.order);
+ok(ords.every((o, i) => i === 0 || ords[i - 1] < o) && (seq() === '甲戊乙丙丁' || seq() === '戊甲乙丙丁'), 'kéo nhiều lần: order vẫn tăng chặt, thứ tự đúng');
+const dZ = Store.addDeck('Z'); Store.addWord(inp('己'), dZ);
+Store.moveWord(idOf('己'), idOf('甲'));
+ok(Store.getWords().find((w) => w.char === '己')!.deck === dZ && seq().startsWith('甲戊') || seq().startsWith('戊甲'), 'khác bộ → không làm gì');
+Store.replaceAll({ decks: [], words: [{ ...mk('一', 0), createdAt: 5, order: undefined as unknown as number }, { ...mk('二', 0), createdAt: 3, order: undefined as unknown as number }], deleted: [] });
+ok(seq() === '二一' && Store.getWords()[0].order === 3, 'từ cũ không có order → dùng createdAt');
 
 console.log('learn.check OK');

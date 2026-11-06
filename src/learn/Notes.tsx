@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useI18n } from '../i18n';
 import {
-  useWords, useDecks, useCurrentDeck, addWord, addMany, updateWord, removeWord, importWords, exportData,
+  useWords, useDecks, useCurrentDeck, addWord, addMany, updateWord, removeWord, moveWord, importWords, exportData,
   addDeck, renameDeck, removeDeck, setCurrentDeck, isHanzi, DEFAULT_DECK, type Word, type Deck,
 } from './store';
 import { lookup, loadHsk, normalizeHan, fold, HSK_LEVELS, type HskLevel } from './dict';
@@ -74,6 +74,33 @@ export default function Notes() {
     if (!query) return showAll ? words : words.filter((w) => w.deck === current);
     return words.filter((w) => w.char.includes(query) || fold(w.pinyin).includes(query) || fold(w.meaning).includes(query) || fold(w.note).includes(query));
   }, [words, current, query, showAll]);
+
+  // ── kéo sắp xếp (chỉ trong một bộ, không khi tìm) ── pointer events để chạy cả trên cảm ứng
+  const canDrag = !query && !showAll;
+  const [drag, setDrag] = useState<{ id: string; over: string | null } | null>(null);
+  const startDrag = (w: Word) => (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!canDrag || e.button > 0) return;
+    e.preventDefault();
+    const el = e.currentTarget; el.setPointerCapture(e.pointerId);
+    let over: string | null = null;
+    const move = (ev: PointerEvent) => {
+      const li = document.elementFromPoint(ev.clientX, ev.clientY)?.closest<HTMLElement>('[data-wid]');
+      over = li?.dataset.wid && li.dataset.wid !== w.id ? li.dataset.wid : null;
+      setDrag({ id: w.id, over });
+    };
+    const up = () => {
+      el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
+      if (over) moveWord(w.id, over);
+      setDrag(null);
+    };
+    el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+    setDrag({ id: w.id, over: null });
+  };
+  const keyMove = (w: Word, i: number) => (e: React.KeyboardEvent) => {
+    const to = e.key === 'ArrowUp' ? i - 1 : e.key === 'ArrowDown' ? i + 1 : e.key === 'Home' ? 0 : e.key === 'End' ? inDeck.length - 1 : i;
+    if (to === i || to < 0 || to >= inDeck.length) return;
+    e.preventDefault(); moveWord(w.id, inDeck[to].id); // li giữ key → nút vẫn giữ focus sau khi đổi chỗ
+  };
 
   // Từ đang sửa bị xóa (ở máy khác qua đồng bộ…) → về chế độ thêm mới
   useEffect(() => { if (selected && !editing) reset(); }, [selected, editing]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -373,11 +400,19 @@ export default function Notes() {
           <ul key={showAll ? ALL : current} className="stagger grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {inDeck.map((w, i) => {
               const on = selected === w.id;
+              const dragging = drag?.id === w.id, target = drag?.over === w.id;
               return (
-                <li key={w.id} style={{ '--i': Math.min(i, 12) } as React.CSSProperties}>
+                <li key={w.id} data-wid={w.id} style={{ '--i': Math.min(i, 12) } as React.CSSProperties}
+                  className={`flex items-stretch gap-1 rounded-2xl transition-opacity ${dragging ? 'opacity-40' : ''} ${target ? 'ring-2 ring-accent ring-offset-2 ring-offset-bg' : ''}`}>
+                  {canDrag && (
+                    <button type="button" onPointerDown={startDrag(w)} onKeyDown={keyMove(w, i)} aria-label={t('noteDragHint')} title={t('noteDragHint')}
+                      className="flex-shrink-0 w-5 grid place-items-center rounded-lg text-subtle hover:text-text hover:bg-surface-2 cursor-grab active:cursor-grabbing touch-none select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50">
+                      <svg className="w-3 h-3" viewBox="0 0 12 12" fill="currentColor" aria-hidden><circle cx="4" cy="2.5" r="1.1" /><circle cx="8" cy="2.5" r="1.1" /><circle cx="4" cy="6" r="1.1" /><circle cx="8" cy="6" r="1.1" /><circle cx="4" cy="9.5" r="1.1" /><circle cx="8" cy="9.5" r="1.1" /></svg>
+                    </button>
+                  )}
                   <button type="button" onClick={() => select(w)} onDoubleClick={() => select(w)} aria-pressed={on}
                     title={t('noteOpenHint')}
-                    className={`group relative w-full text-left flex gap-4 p-3.5 rounded-2xl bg-surface border transition-all duration-200 hover:shadow-[0_12px_28px_-14px_rgb(0_0_0/0.3)] hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
+                    className={`group relative min-w-0 flex-1 text-left flex gap-4 p-3.5 rounded-2xl bg-surface border transition-all duration-200 hover:shadow-[0_12px_28px_-14px_rgb(0_0_0/0.3)] hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
                       on ? 'border-accent ring-1 ring-accent/40' : 'border-border hover:border-border-2'}`}>
                     <StrokeCanvas char={w.char} size={112} className="flex-shrink-0 rounded-xl bg-surface-2" />
                     <div className="min-w-0 flex-1 py-0.5">
