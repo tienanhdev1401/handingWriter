@@ -32,8 +32,12 @@ export function mergeBackups(local: Backup, remote: Backup | null): Backup {
     if (gone(`w:${id}`, w.updatedAt)) continue;
     out.push(decks.has(w.deck) ? w : { ...w, deck: DEFAULT_DECK });
   }
+  // Cùng chữ trong cùng bộ nhưng khác id (mây ghi bởi bản cũ: id = chữ; máy bản mới: id ngẫu nhiên) → giữ một.
+  // Sắp theo id trước để hoà hoàn toàn vẫn chọn giống nhau ở hai máy. Chữ ở bộ khác vẫn giữ (đa bộ).
+  const byCharDeck = new Map<string, Word>();
+  for (const w of out.sort((p, q) => p.id.localeCompare(q.id))) { const k = w.deck + '\0' + w.char; const p = byCharDeck.get(k); byCharDeck.set(k, p ? pick(p, w) : w); }
   const deleted: Tombstone[] = [...dead].map(([key, at]) => ({ key, at }));
-  return { decks: [...decks.values()], words: out, deleted };
+  return { decks: [...decks.values()], words: [...byCharDeck.values()], deleted };
 }
 
 function pick(a: Word, b: Word): Word {

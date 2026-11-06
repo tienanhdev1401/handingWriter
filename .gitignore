@@ -32,3 +32,6 @@ android/.gradle/
 # Cấu hình Firebase riêng của từng người (xem *.example.*)
 src/firebase.config.ts
 android/app/google-services.json
+
+# Sổ từ xuất ra (dữ liệu cá nhân)
+so-tu-*.json

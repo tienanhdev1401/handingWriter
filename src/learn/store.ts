@@ -102,8 +102,10 @@ function commit(p: Partial<Pick<State, 'decks' | 'words' | 'deleted' | 'sel' | '
 const sub = (f: () => void) => { subs.add(f); return () => { subs.delete(f); }; };
 /** Lắng nghe mọi thay đổi (dùng cho đồng bộ đám mây). */
 export const subscribe = sub;
+/** Chuẩn hoá một Backup thô (document Firestore, file nhập, bản cũ thiếu id/order…) trước khi dùng. */
+export const parseBackup = (b: Partial<Backup> | null | undefined): Backup => ({ decks: parseDecks(b?.decks), words: parseWords(b?.words), deleted: parseDeleted(b?.deleted) });
 /** Thay toàn bộ dữ liệu bằng bản đã hợp nhất từ mây (giữ bộ đang chọn/hiện tại nếu còn tồn tại). */
-export const replaceAll = (b: Backup) => commit({ decks: parseDecks(b.decks), words: parseWords(b.words), deleted: parseDeleted(b.deleted) });
+export const replaceAll = (b: Backup) => commit(parseBackup(b));
 
 // ── Đọc ──
 export const getWords = () => state.words;

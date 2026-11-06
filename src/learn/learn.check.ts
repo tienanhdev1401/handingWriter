@@ -4,7 +4,7 @@ import { makeRound, shuffle, fallSeconds, MIN_WORDS } from './game';
 import * as Store from './store';
 import { grade, filterScope, nextStreak } from './srs';
 import { judge, resample, toScreen, type Pt } from './judge';
-import type { Word } from './store';
+import type { Word, Backup } from './store';
 import { mergeBackups, sameBackup, canon } from './merge';
 
 const ok = (c: boolean, m: string) => { if (!c) throw new Error('FAIL: ' + m); };
@@ -114,6 +114,27 @@ ok(!sameBackup(local, remote) && sameBackup(local, { decks: [...local.decks].rev
 const tie = mergeBackups({ decks: [D('default', '')], words: [W('一', 1, 5, 'default', 'L')], deleted: [] }, { decks: [D('default', '')], words: [W('一', 1, 9, 'default', 'R')], deleted: [] });
 ok(tie.words[0].note === 'R', 'hoà reviews → due muộn hơn thắng');
 
+// ── document mây do bản cũ ghi: từ KHÔNG có id/order (lỗi "lên điện thoại thì bộ rỗng chữ") ──
+const rawRemote = {
+  decks: [D('default', ''), D('hsk', 'HSK 1')],
+  words: ['一', '二', '三'].map((c) => ({ char: c, pinyin: '', meaning: '', note: '', createdAt: 1, box: 0, due: 0, reviews: 0, lapses: 0, deck: 'hsk', updatedAt: 1 })),
+  deleted: [],
+} as unknown as Backup;
+const fresh = { decks: [D('default', '')], words: [], deleted: [] };
+ok(mergeBackups(fresh, Store.parseBackup(rawRemote)).words.length === 3, 'mây bản cũ (không id) → chuẩn hoá rồi merge → giữ đủ 3 từ');
+ok(Store.parseBackup(rawRemote).words.every((w) => w.id === w.char && w.order === 1), 'chuẩn hoá: id = chữ, order = createdAt');
+ok(Store.parseBackup(null).words.length === 0 && Store.parseBackup(null).decks.length === 1, 'parseBackup(null) → rỗng + Sổ chung');
+let rawThrew = false;
+try { sameBackup(mergeBackups(fresh, rawRemote), rawRemote); } catch { rawThrew = true; }
+ok(rawThrew, 'tái hiện 1.8.3: sameBackup trên mây thô không id → ném lỗi (từng treo "đang đồng bộ" mãi)');
+ok(sameBackup(Store.parseBackup(rawRemote), Store.parseBackup(rawRemote)), 'sau chuẩn hoá: so sánh được, không ném');
+const oldCloud = { decks: [D('default', ''), D('shop', '')], words: [W('買', 1, 0, 'shop', 'cũ', 100, '買')], deleted: [] };
+const newLocal = { decks: [D('default', ''), D('shop', '')], words: [W('買', 2, 0, 'shop', 'mới', 200, 'uuid-1')], deleted: [] };
+const dd = mergeBackups(newLocal, oldCloud);
+ok(dd.words.length === 1 && dd.words[0].id === 'uuid-1' && dd.words[0].note === 'mới', 'cùng chữ cùng bộ, khác id (mây bản cũ vs máy bản mới) → giữ bản mới hơn, không nhân đôi');
+ok(sameBackup(mergeBackups(oldCloud, newLocal), dd), 'khử trùng giao hoán');
+ok(mergeBackups(fresh, { ...oldCloud, words: [W('買', 0, 0, 'shop', '', 1, 'a'), W('買', 0, 0, 'default', '', 1, 'b')] }).words.length === 2, 'cùng chữ KHÁC bộ → giữ cả hai (đa bộ)');
+
 // ── tombstone & updatedAt (lỗi "xóa rồi vẫn hiện lại") ──
 const base = { decks: [D('default', '')], words: [W('一', 0, 0, 'default', '', 100), W('二', 0, 0, 'default', '', 100)], deleted: [] };
 const delB = { decks: [D('default', '')], words: [W('一', 0, 0, 'default', '', 100)], deleted: [T('w:二', 200)] };
@@ -195,8 +216,8 @@ Store.removeWord(oneX.id);
 ok(Store.getWords().filter((w) => w.char === '一').length === 1 && Store.getWords()[0].deck === dY, 'xóa 一 ở X → vẫn còn 一 ở Y');
 // merge: cung chu khac id -> ca hai song
 const mAB = mergeBackups(
-  { decks: [D('default', '')], words: [W('雨', 0, 0, 'a', '', 1, 'ida')], deleted: [] },
-  { decks: [D('default', '')], words: [W('雨', 0, 0, 'b', '', 1, 'idb')], deleted: [] });
+  { decks: [D('default', ''), D('a', 'A'), D('b', 'B')], words: [W('雨', 0, 0, 'a', '', 1, 'ida')], deleted: [] },
+  { decks: [D('default', ''), D('a', 'A'), D('b', 'B')], words: [W('雨', 0, 0, 'b', '', 1, 'idb')], deleted: [] });
 ok(mAB.words.length === 2, 'merge: cùng chữ khác id (2 bộ) → giữ cả hai');
 
 // ── kéo sắp xếp (order) ──
