@@ -40,6 +40,19 @@ npm run android:apk    # Android debug APK → android/app/build/outputs/apk/deb
 
 Android cần Android SDK (API 35) và JDK 21; đường dẫn JDK đặt trong `android/gradle.properties`.
 
+## Giọng đọc (tuỳ chọn, tải một lần)
+
+Nút loa ở Lật thẻ / Tập viết / Sổ từ phát giọng neural đã kiểm âm (Đài Loan phồn thể hoặc đại lục giản thể), mỗi gói ~26 MB tải một lần rồi dùng offline. Từ chưa có âm chuẩn thì nút xám, app **không** rơi về TTS của máy để tránh dạy sai âm cho người mới.
+
+Gói được tạo sẵn bằng `scripts/build-voices.py` (cần `pip install edge-tts pypinyin` và ffmpeg) rồi đưa lên GitHub Release tag `voices-v1`:
+
+```bash
+python scripts/build-voices.py tw   # → C:/builds/voices/voice-tw.{bin,json}
+python scripts/build-voices.py cn
+```
+
+Chữ đa âm được ép đọc đúng âm trong `dict.json`; từ ngoài từ điển chỉ ghép từng chữ khi pinyin trong sổ khớp âm clip và không dính biến điệu (不, 一, hai thanh 3 liền nhau).
+
 ## Đồng bộ (Firebase, tuỳ chọn)
 
 Không cấu hình thì app chạy hoàn toàn offline và ẩn nút đăng nhập.
