@@ -47,12 +47,13 @@ ok(nextStreak({ last: 'd2', count: 3 }, 'd2', 'd1').count === 3, 'cùng ngày kh
 const S = 300;
 const median = toScreen([[200, 700], [800, 700]], S); // nét ngang trái → phải
 ok(resample(median, 5).length === 5, 'resample count');
-const good: Pt[] = [[60, 100], [120, 96], [180, 92], [234, 95]];
+ok(toScreen([[0, 900]], S)[0][1] === 0 && toScreen([[0, -124]], S)[0][1] === S, 'toScreen: y=900 → mép trên, y=-124 → mép dưới (chữ không bị cắt đáy)');
+const good: Pt[] = [[60, 60], [120, 56], [180, 52], [234, 55]]; // median y=700 → màn ≈58.6
 ok(judge(good, median, S).ok, 'vẽ bám nét → đạt');
 ok(!judge([...good].reverse(), median, S).ok, 'vẽ ngược chiều → trượt');
-ok(!judge([[60, 100], [100, 99]], median, S).ok, 'quá ngắn → trượt');
+ok(!judge([[60, 60], [100, 59]], median, S).ok, 'quá ngắn → trượt');
 ok(!judge([[60, 220], [234, 220]], median, S).ok, 'lệch xa → trượt');
-ok(judge([[150, 150]], toScreen([[500, 500], [520, 480]], S), S).ok, 'nét chấm: chạm đúng chỗ là đạt');
+ok(judge([[150, 120]], toScreen([[500, 500], [520, 480]], S), S).ok, 'nét chấm: chạm đúng chỗ là đạt');
 ok(!judge([], median, S).ok, 'không vẽ gì → trượt');
 
 // ── store: bộ từ ──

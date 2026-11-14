@@ -51,6 +51,7 @@ export default function Write() {
   const word = words.length ? words[idx % words.length] : undefined;
   const chars = word ? [...word.char] : [];
   const [ci, setCi] = useState(0);           // chữ đang luyện trong từ nhiều chữ
+  const [solo, setSolo] = useState(false);   // người dùng bấm chọn riêng một chữ → xong chữ đó là dừng, không sang chữ kế, không chấm cả từ
   const key = chars[ci] ?? chars[0];
   const [data, setData] = useState<CharacterData | null | undefined>(undefined);
   const [done, setDone] = useState(0);
@@ -65,7 +66,7 @@ export default function Write() {
   const pts = useRef<Pt[]>([]);
   const drawing = useRef(false);
 
-  useEffect(() => { setCi(0); setMisses(0); }, [word?.char]);
+  useEffect(() => { setCi(0); setSolo(false); setMisses(0); }, [word?.char]);
   useEffect(() => {
     let live = true;
     setData(undefined); setDone(0); setFails(0); setHint(false); pts.current = [];
@@ -111,7 +112,7 @@ export default function Write() {
   const n = data?.strokes.length ?? 0;
   const charDone = !!data && n > 0 && done >= n;
   const lastChar = ci >= chars.length - 1;
-  const finished = charDone && lastChar;
+  const finished = charDone && (lastChar || solo);
   const pos = (e: PointerEvent<HTMLCanvasElement>): Pt => {
     const r = e.currentTarget.getBoundingClientRect();
     return [((e.clientX - r.left) * SIZE) / r.width, ((e.clientY - r.top) * SIZE) / r.height];
@@ -138,7 +139,8 @@ export default function Write() {
       const next = done + 1;
       setDone(next);
       if (next >= n) {
-        if (lastChar) { updateWord(word.id, grade(word, misses < 3)); bumpStreak(); }
+        if (solo) { /* luyện riêng một chữ: dừng tại đây, chưa viết cả từ nên không chấm */ }
+        else if (lastChar) { updateWord(word.id, grade(word, misses < 3)); bumpStreak(); }
         else setTimeout(() => setCi((c) => c + 1), 600); // sang chữ tiếp theo trong từ
       }
     } else {
@@ -149,9 +151,9 @@ export default function Write() {
     }
   };
   const onCancel = () => { drawing.current = false; pts.current = []; };
-  const restart = () => { setCi(0); setDone(0); setFails(0); setMisses(0); setHint(false); pts.current = []; };
+  const restart = () => { setCi(0); setSolo(false); setDone(0); setFails(0); setMisses(0); setHint(false); pts.current = []; };
   // Chọn chữ trong từ nhiều chữ để luyện riêng (reset tay vì hai chữ giống nhau, vd 媽媽, không đổi `key`)
-  const goChar = (i: number) => { setCi(i); setDone(0); setFails(0); setHint(false); pts.current = []; };
+  const goChar = (i: number) => { setCi(i); setSolo(true); setDone(0); setFails(0); setHint(false); pts.current = []; };
   const goWord = (d: number) => setIdx((i) => (i + d + words.length) % words.length);
   // Pinyin tách theo âm tiết ("péng you" → ["péng","you"]); chỉ gán theo chữ khi số âm tiết khớp số chữ.
   const syll = word.pinyin.trim().split(/\s+/).filter(Boolean);
@@ -220,7 +222,7 @@ export default function Write() {
         {finished && (
           <div className="absolute inset-x-0 bottom-3 flex justify-center animate-in pointer-events-none">
             <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-medium border border-emerald-500/30">
-              {t('writeDone')}
+              {t(solo && !lastChar ? 'writeDoneChar' : 'writeDone')}
             </span>
           </div>
         )}

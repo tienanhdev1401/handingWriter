@@ -2,6 +2,9 @@ import type { CharacterData, GenerationOptions, FrameData } from '../types';
 
 /** Make Me a Hanzi uses a 1024×1024 coordinate space */
 const HANZI_COORD_SIZE = 1024;
+/** Top of the glyph box in that space: y runs from -124 (descender) up to 900, NOT 0..1024.
+ *  Mapping 0..1024 shifted every glyph down ~12% and clipped its bottom (makemeahanzi README; hanzi-writer CHARACTER_BOUNDS). */
+const HANZI_TOP = 900;
 
 /** Half-width of the clip mask polygon in coordinate units */
 const CLIP_HALF_WIDTH = 160;
@@ -15,7 +18,7 @@ const CLIP_HALF_WIDTH = 160;
  */
 function applyHanziTransform(ctx: CanvasRenderingContext2D, size: number): void {
   const scale = size / HANZI_COORD_SIZE;
-  ctx.translate(0, size);
+  ctx.translate(0, HANZI_TOP * scale); // y=900 → top edge, y=-124 → bottom edge
   ctx.scale(scale, -scale);
 }
 
@@ -69,7 +72,7 @@ function drawStrokeNumberBadge(
   // Tip of the stroke = last median point, converted to screen space
   const tip = median[median.length - 1];
   const tipX = tip[0] * scale;
-  const tipY = size - tip[1] * scale; // flip Y
+  const tipY = (HANZI_TOP - tip[1]) * scale; // flip Y
 
   // Compute stroke end direction (second-to-last → last median point, in screen space)
   let dirX = 0;
@@ -77,7 +80,7 @@ function drawStrokeNumberBadge(
   if (median.length >= 2) {
     const prev = median[median.length - 2];
     const prevScreenX = prev[0] * scale;
-    const prevScreenY = size - prev[1] * scale;
+    const prevScreenY = (HANZI_TOP - prev[1]) * scale;
     dirX = tipX - prevScreenX;
     dirY = tipY - prevScreenY;
     const len = Math.hypot(dirX, dirY);

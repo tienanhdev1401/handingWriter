@@ -1,9 +1,9 @@
 // Chấm nét người dùng vẽ so với median chuẩn của Make Me a Hanzi (cùng hệ toạ độ canvas).
 export type Pt = [number, number];
-const HANZI = 1024;
+const HANZI = 1024, TOP = 900; // hộp chữ Make Me a Hanzi: y từ -124 tới 900 (xem utils/canvas.ts)
 
 export const toScreen = (median: number[][], size: number): Pt[] =>
-  median.map(([x, y]) => [(x * size) / HANZI, size - (y * size) / HANZI]);
+  median.map(([x, y]) => [(x * size) / HANZI, ((TOP - y) * size) / HANZI]);
 
 const dist = (a: Pt, b: Pt) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 export const pathLength = (p: Pt[]) => p.reduce((s, q, i) => (i ? s + dist(p[i - 1], q) : 0), 0);
