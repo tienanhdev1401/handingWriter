@@ -57,7 +57,7 @@ export default function Write() {
   const [fails, setFails] = useState(0);   // sai liên tiếp ở nét hiện tại → 3 lần thì gợi ý
   const [misses, setMisses] = useState(0); // tổng sai cả chữ → chấm nhớ/quên
   const [hint, setHint] = useState(false);
-  // Viết ẩn: không hiện chữ mờ, viết theo trí nhớ. Gợi ý (tay hoặc sau 3 lần sai) vẫn lộ chữ tạm thời.
+  // Viết ẩn: không hiện chữ mờ, viết theo trí nhớ. Gợi ý (tay hoặc sau 3 lần sai) chỉ chạy nét đang kẹt, không lộ cả chữ.
   const [blind, setBlind] = useState(() => localStorage.getItem(BLIND_KEY) === '1');
   const toggleBlind = () => setBlind((b) => { try { localStorage.setItem(BLIND_KEY, b ? '0' : '1'); } catch { /* ignore */ } return !b; });
   const [flash, setFlash] = useState<'' | 'ok' | 'bad'>('');
@@ -85,7 +85,7 @@ export default function Write() {
     const t0 = performance.now();
     let raf = 0;
     const tick = (now: number) => {
-      draw(c, data, done, Math.min(1, ((now - t0) % 1400) / 1000), true); // gợi ý luôn lộ chữ mờ
+      draw(c, data, done, Math.min(1, ((now - t0) % 1400) / 1000), !blind); // chỉ nét đang kẹt; viết ẩn vẫn giấu chữ mờ
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -150,18 +150,20 @@ export default function Write() {
   };
   const onCancel = () => { drawing.current = false; pts.current = []; };
   const restart = () => { setCi(0); setDone(0); setFails(0); setMisses(0); setHint(false); pts.current = []; };
+  // Chọn chữ trong từ nhiều chữ để luyện riêng (reset tay vì hai chữ giống nhau, vd 媽媽, không đổi `key`)
+  const goChar = (i: number) => { setCi(i); setDone(0); setFails(0); setHint(false); pts.current = []; };
   const goWord = (d: number) => setIdx((i) => (i + d + words.length) % words.length);
   // Pinyin tách theo âm tiết ("péng you" → ["péng","you"]); chỉ gán theo chữ khi số âm tiết khớp số chữ.
   const syll = word.pinyin.trim().split(/\s+/).filter(Boolean);
   const curPy = chars.length > 1 && syll.length === chars.length ? syll[ci] : '';
-  // Viết ẩn: giấu cả chữ Hán trong header/chip cho tới khi viết xong (gợi ý đang chạy thì lộ)
-  const hideChar = blind && !finished && !hint;
+  // Viết ẩn: giấu cả chữ Hán trong header/chip/ô chọn từ cho tới khi viết xong (gợi ý cũng không lộ)
+  const hideChar = blind && !finished;
   const mask = (c: string) => (hideChar ? '？' : c);
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-5 p-6">
       <DeckPicker className="justify-center max-w-xl" />
-      <WordPicker words={words} index={idx % words.length} onPick={(i) => { setIdx(i); }} />
+      <WordPicker words={words} index={idx % words.length} onPick={(i) => { setIdx(i); }} hideChar={hideChar} />
       <div className="w-full max-w-[360px] lg:max-w-[480px] text-xs lg:text-sm space-y-1.5">
         <div className="flex items-baseline justify-between gap-3">
           <span className="flex items-baseline gap-2 min-w-0">
@@ -182,10 +184,11 @@ export default function Write() {
         {chars.length > 1 && (
           <div className="flex items-center gap-1.5">
             {chars.map((c, i) => (
-              <span key={i} className={`inline-flex items-baseline gap-1 px-2 py-0.5 rounded-md border ${i === ci ? 'bg-text text-bg border-text' : i < ci ? 'bg-surface-2 text-muted border-border line-through' : 'bg-surface text-muted border-border'}`}>
+              <button key={i} type="button" onClick={() => goChar(i)} aria-pressed={i === ci} title={t('writePickChar')}
+                className={`inline-flex items-baseline gap-1 px-2 py-0.5 rounded-md border transition-colors ${i === ci ? 'bg-text text-bg border-text' : i < ci ? 'bg-surface-2 text-muted border-border line-through hover:text-text' : 'bg-surface text-muted border-border hover:text-text hover:border-border-2'}`}>
                 <span className="font-hanzi text-sm leading-none">{i < ci ? c : mask(c)}</span>
                 {syll.length === chars.length && <span className={`text-[11px] ${i === ci ? 'opacity-80' : ''}`}>{syll[i]}</span>}
-              </span>
+              </button>
             ))}
             <span className="ml-auto text-subtle">{t('writeCharOf', { i: ci + 1, n: chars.length })}{curPy ? ` · ${curPy}` : ''}</span>
           </div>
