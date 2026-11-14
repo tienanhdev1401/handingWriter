@@ -6,6 +6,7 @@ import {
 } from './store';
 import { lookup, loadHsk, normalizeHan, fold, HSK_LEVELS, type HskLevel } from './dict';
 import StrokeCanvas from './StrokeCanvas';
+import Speak from './Speak';
 import { saveBlob } from '../platform';
 
 const field =
@@ -230,7 +231,10 @@ export default function Notes() {
               <div className="flex-1 min-w-0 flex items-center gap-3">
                 <StrokeCanvas char={editing.char} size={88} className="flex-shrink-0 rounded-xl bg-surface-2" />
                 <div className="min-w-0">
-                  <p className="font-hanzi text-4xl leading-none truncate">{editing.char}</p>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <p className="font-hanzi text-4xl leading-none truncate">{editing.char}</p>
+                    <Speak text={editing.char} pinyin={editing.pinyin} />
+                  </div>
                   <p className="mt-1.5 text-[11px] text-subtle">{t('noteReviews', { n: editing.reviews, b: editing.box + 1 })}</p>
                 </div>
               </div>

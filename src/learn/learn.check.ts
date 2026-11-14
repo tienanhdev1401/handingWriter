@@ -6,6 +6,7 @@ import { grade, filterScope, nextStreak } from './srs';
 import { judge, resample, toScreen, type Pt } from './judge';
 import type { Word, Backup } from './store';
 import { mergeBackups, sameBackup, canon } from './merge';
+import { safeSplit, pykey } from './voice';
 
 const ok = (c: boolean, m: string) => { if (!c) throw new Error('FAIL: ' + m); };
 const mk = (char: string, i: number): Word => ({ id: char, char, pinyin: '', meaning: String(i), note: '', createdAt: 0, box: 0, due: 0, reviews: 0, lapses: 0, deck: 'default', order: 0, updatedAt: 0 });
@@ -243,5 +244,18 @@ Store.moveWord(idOf('己'), idOf('甲'));
 ok(Store.getWords().find((w) => w.char === '己')!.deck === dZ && seq().startsWith('甲戊') || seq().startsWith('戊甲'), 'khác bộ → không làm gì');
 Store.replaceAll({ decks: [], words: [{ ...mk('一', 0), createdAt: 5, order: undefined as unknown as number }, { ...mk('二', 0), createdAt: 3, order: undefined as unknown as number }], deleted: [] });
 ok(seq() === '二一' && Store.getWords()[0].order === 3, 'từ cũ không có order → dùng createdAt');
+
+// ── giọng đọc: ghép từng chữ chỉ khi chắc đúng ──
+ok(pykey('zěn me') === 'zen3-me5' && pykey('Ā lā bó yǔ') === 'a1-la1-bo2-yu3' && pykey('lu:è') === 'lve4' && pykey('nǚ') === 'nv3', 'pykey: dấu thanh → số, ü/u: → v, bỏ hoa');
+const clip: Record<string, string> = { 日: 'ri4', 本: 'ben3', 好: 'hao3', 愛: 'ai4', 你: 'ni3', 老: 'lao3', 虎: 'hu3', 是: 'shi4', 美: 'mei3', 國: 'guo2', 水: 'shui3' };
+const keyOf = (c: string) => clip[c];
+ok(safeSplit('日本', 'rì běn', keyOf)?.join('') === '日本', 'âm từng chữ khớp clip, không biến điệu → ghép được');
+ok(safeSplit('愛好', 'ài hào', keyOf) === null, 'clip 好 là hǎo nhưng từ cần hào → không ghép (đa âm)');
+ok(safeSplit('你好', 'nǐ hǎo', keyOf) === null && safeSplit('老虎', 'lǎo hǔ', keyOf) === null, 'hai thanh 3 liền nhau (biến điệu) → không ghép');
+ok(safeSplit('不是', 'bù shì', keyOf) === null, 'có 不 → không ghép');
+ok(safeSplit('一本', 'yì běn', keyOf) === null, 'có 一 → không ghép');
+ok(safeSplit('美國', 'měi guó', keyOf)?.length === 2 && safeSplit('美國', 'měiguó', keyOf) === null, 'pinyin phải tách đúng số âm tiết');
+ok(safeSplit('美國', 'mei guo', keyOf) === null, 'pinyin không dấu → không chắc thanh → không ghép');
+ok(safeSplit('水', 'shuǐ', keyOf) === null && safeSplit('日X', 'rì x', keyOf) === null, 'một chữ / chữ không có clip → không ghép');
 
 console.log('learn.check OK');

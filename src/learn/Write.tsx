@@ -10,6 +10,7 @@ import { judge, toScreen, type Pt } from './judge';
 import { beep } from './sound';
 import Hint from './Hint';
 import WordPicker from './WordPicker';
+import Speak from './Speak';
 
 const SIZE = 480; // canvas nội bộ; CSS co theo màn (min(100%, 360px) điện thoại, 480px từ lg)
 const cssRgb = (v: string) => `rgb(${getComputedStyle(document.documentElement).getPropertyValue(v).trim()})`;
@@ -173,11 +174,13 @@ export default function Write() {
               <span className="flex items-baseline gap-2 min-w-0">
                 <span className="text-accent font-semibold text-base leading-none">{word.pinyin || '…'}</span>
                 {word.meaning && <span className="text-text truncate">{word.meaning}</span>}
+                <Speak text={word.char} pinyin={word.pinyin} className="self-center" />
               </span>
             ) : (
               <>
                 <span className="font-hanzi text-2xl text-text leading-none">{word.char}</span>
                 {word.pinyin && <span className="text-accent font-medium truncate">{word.pinyin}</span>}
+                <Speak text={word.char} pinyin={word.pinyin} className="self-center" />
               </>
             )}
           </span>

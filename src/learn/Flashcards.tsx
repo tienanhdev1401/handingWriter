@@ -7,6 +7,8 @@ import { filterScope, grade, bumpStreak, BOXES, type Scope } from './srs';
 import StrokeCanvas from './StrokeCanvas';
 import ScopePills from './ScopePills';
 import Hint from './Hint';
+import Speak from './Speak';
+import { useVoice, say } from './voice';
 
 const ghost = 'inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium bg-surface border border-border text-muted hover:text-text hover:border-border-2 hover:-translate-y-px';
 
@@ -29,6 +31,8 @@ export default function Flashcards() {
   }, [scope, n]);
 
   const w = n ? (list[order[pos]] ?? list[0]) : undefined;
+  const { auto } = useVoice();
+  useEffect(() => { if (flipped && auto && w) say(w.char, w.pinyin); }, [flipped, auto, w]);
   const go = (d: number) => { if (n) setPos((p) => (p + d + n) % n); setFlipped(false); };
   const rate = (ok: boolean) => {
     if (!w || !flipped) return;
@@ -64,7 +68,10 @@ export default function Flashcards() {
       <div className="w-full max-w-sm lg:max-w-lg">
         <div className="flex items-center justify-between gap-3 mb-2">
           <ScopePills value={scope} onChange={setScope} />
-          <span className="text-xs text-subtle">{n ? t('cardProgress', { i: pos + 1, n }) : ''}</span>
+          <span className="flex items-center gap-2 text-xs text-subtle">
+            {w && <Speak text={w.char} pinyin={w.pinyin} autoToggle />}
+            {n ? t('cardProgress', { i: pos + 1, n }) : ''}
+          </span>
         </div>
         <div className="h-1 rounded-full bg-surface-2 overflow-hidden">
           <div className="h-full bg-accent rounded-full transition-all duration-300" style={{ width: n ? `${((pos + 1) / n) * 100}%` : 0 }} />
