@@ -3,8 +3,8 @@
 #   pip install edge-tts pypinyin   +   ffmpeg trên PATH
 #   python scripts/build-voices.py tw            # zh-TW HsiaoChen (nữ)
 #   python scripts/build-voices.py cn            # zh-CN Xiaoxiao (nữ)
-#   tuỳ chọn: --limit N (thử nhanh)  --out DIR (mặc định C:/builds/voices)  --jobs 6
-# Ra: voice-<id>.bin (các clip ogg/opus nối liền) + voice-<id>.json ({"v":1,"e":{text:[offset,length]}}).
+#   tuỳ chọn: --limit N (thử nhanh)  --out DIR (mặc định public/voices — đóng thẳng vào app)  --jobs 6
+# Ra: voice-<id>.bin (các clip ogg/opus nối liền) + voice-<id>.json ({"v":1,"e":{text:[offset,length(,pykey)]}}).
 # Chạy lại thì dùng cache clip trong <out>/cache-<id>/ nên tiếp tục được sau khi ngắt.
 #
 # Vì sao không dùng TTS của máy: chữ đa âm (行 xíng/háng, 长 cháng/zhǎng…) máy đoán sai với người mới
@@ -98,10 +98,10 @@ async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('voice', choices=VOICES)
     ap.add_argument('--limit', type=int, default=0)
-    ap.add_argument('--out', default='C:/builds/voices')
+    ap.add_argument('--out', default=str(ROOT / 'public' / 'voices'))
     ap.add_argument('--jobs', type=int, default=6)
     a = ap.parse_args()
-    out = Path(a.out); cache = out / f'cache-{a.voice}'; cache.mkdir(parents=True, exist_ok=True)
+    out = Path(a.out); cache = Path('C:/builds/voices') / f'cache-{a.voice}'; cache.mkdir(parents=True, exist_ok=True); out.mkdir(parents=True, exist_ok=True)
 
     items, keys, skipped = load_items(a.voice)
     texts = sorted(items)[: a.limit or None]

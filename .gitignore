@@ -38,3 +38,6 @@ so-tu-*.json
 
 # Python
 __pycache__/
+
+# Gói giọng đọc (~52 MB, tạo bằng scripts/build-voices.py)
+public/voices/

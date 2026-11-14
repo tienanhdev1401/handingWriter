@@ -1,99 +1,58 @@
 import { useSyncExternalStore } from 'react';
 
 /**
- * Giọng đọc offline. Gói do scripts/build-voices.py tạo sẵn bằng TTS neural (đã ép đúng âm cho chữ đa âm),
- * tải MỘT LẦN rồi lưu Cache Storage — chạy giống nhau trên web, Electron (app://) và Android (WebView).
- * Không có clip chuẩn → không đọc (loa xám); tuyệt đối không rơi về TTS máy đọc sai cho người mới.
+ * Giọng đọc offline, đóng sẵn trong app tại public/voices/ (do scripts/build-voices.py tạo bằng TTS neural,
+ * đã ép đúng âm cho chữ đa âm). Không có clip chuẩn → không đọc (loa xám); tuyệt đối không rơi về TTS máy
+ * đọc sai cho người mới. Gói nạp lười lần đầu bấm loa (~26 MB/giọng, đọc từ đĩa nên nhanh).
  */
 export type VoiceId = 'tw' | 'cn';
-export const VOICES: Record<VoiceId, { mb: number }> = { tw: { mb: 26 }, cn: { mb: 26 } };
-// ponytail: gói đặt ở GitHub Release của repo; đổi host thì sửa dòng này (hoặc localStorage learn.voiceBase để thử cục bộ).
-const BASE = localStorage.getItem('learn.voiceBase') || 'https://github.com/tienanhdev1401/handingWriter/releases/download/voices-v1';
-const CACHE = 'voices-v1';
+export const VOICE_IDS: VoiceId[] = ['tw', 'cn'];
 const K = { voice: 'learn.voice', auto: 'learn.voiceAuto' };
 
 type Seg = [off: number, len: number, key?: string]; // key: pykey của clip (chỉ chữ đơn)
 interface Pack { index: Record<string, Seg>; blob: Blob }
 interface State {
   voice: VoiceId;
-  auto: boolean;                      // tự đọc khi lật thẻ
-  ready: Partial<Record<VoiceId, boolean>>;
-  pack: Pack | null;                  // gói của giọng đang chọn (Blob lười, không chiếm RAM)
-  progress: number | null;            // 0..1 khi đang tải; -1 = đang tải, chưa rõ kích thước
-  error: string;
-  checked: boolean;                   // đã dò Cache Storage lần đầu
+  auto: boolean;             // tự đọc khi lật thẻ
+  pack: Pack | null;         // gói của giọng đang chọn
+  loading: boolean;
+  missing: boolean;          // bản build không kèm gói (dev chưa chạy build-voices.py)
 }
 let state: State = {
   voice: localStorage.getItem(K.voice) === 'cn' ? 'cn' : 'tw',
   auto: localStorage.getItem(K.auto) === '1',
-  ready: {}, pack: null, progress: null, error: '', checked: false,
+  pack: null, loading: false, missing: false,
 };
 const subs = new Set<() => void>();
 const set = (p: Partial<State>) => { state = { ...state, ...p }; subs.forEach((f) => f()); };
 export const useVoice = () => useSyncExternalStore((f) => { subs.add(f); return () => { subs.delete(f); }; }, () => state, () => state);
 
-const hasCache = () => typeof caches !== 'undefined';
-const urls = (id: VoiceId) => ({ json: `${BASE}/voice-${id}.json`, bin: `${BASE}/voice-${id}.bin` });
 let t2s: Record<string, string> = {}; // dị thể/phồn → giản, để 什麽 tra ra 什么
+const packs: Partial<Record<VoiceId, Promise<Pack | null>>> = {};
+const loadPack = (id: VoiceId) => (packs[id] ??= (async () => {
+  try {
+    const [j, b] = await Promise.all([fetch(`/voices/voice-${id}.json`), fetch(`/voices/voice-${id}.bin`)]);
+    if (!j.ok || !b.ok) return null;
+    return { index: ((await j.json()) as { e: Record<string, Seg> }).e, blob: await b.blob() };
+  } catch { return null; }
+})());
 
-async function loadPack(id: VoiceId): Promise<Pack | null> {
-  if (!hasCache()) return null;
-  const c = await caches.open(CACHE), u = urls(id);
-  const [j, b] = await Promise.all([c.match(u.json), c.match(u.bin)]);
-  if (!j || !b) return null;
-  return { index: ((await j.json()) as { e: Record<string, Seg> }).e, blob: await b.blob() };
-}
-
-/** Dò gói đã tải + nạp bảng dị thể; gọi nhiều lần vô hại. */
+/** Nạp gói của giọng đang chọn; gọi nhiều lần vô hại. */
 export async function initVoice() {
-  if (state.checked) return;
-  set({ checked: true });
-  t2s = await fetch('/data/t2s.json').then((r) => (r.ok ? r.json() : {})).catch(() => ({}));
-  if (!hasCache()) return;
-  const ready: State['ready'] = {};
-  const c = await caches.open(CACHE);
-  for (const id of Object.keys(VOICES) as VoiceId[]) ready[id] = !!(await c.match(urls(id).json)) && !!(await c.match(urls(id).bin));
-  set({ ready, pack: ready[state.voice] ? await loadPack(state.voice) : null });
+  if (state.pack || state.loading || state.missing) return;
+  set({ loading: true });
+  if (!Object.keys(t2s).length) t2s = await fetch('/data/t2s.json').then((r) => (r.ok ? r.json() : {})).catch(() => ({}));
+  const pack = await loadPack(state.voice);
+  set({ pack, loading: false, missing: !pack });
 }
 
 export async function setVoice(id: VoiceId) {
   try { localStorage.setItem(K.voice, id); } catch { /* ignore */ }
-  set({ voice: id, pack: null });
-  if (state.ready[id]) set({ pack: await loadPack(id) });
+  set({ voice: id, pack: null, loading: true, missing: false });
+  const pack = await loadPack(id);
+  if (state.voice === id) set({ pack, loading: false, missing: !pack });
 }
 export const setAuto = (on: boolean) => { try { localStorage.setItem(K.auto, on ? '1' : '0'); } catch { /* ignore */ } set({ auto: on }); };
-
-/** Tải gói (có tiến độ) rồi cất vào Cache Storage. Lỗi mạng/CORS → state.error, không ném. */
-export async function installVoice(id: VoiceId) {
-  if (!hasCache()) return set({ error: 'no-cache' });
-  set({ progress: -1, error: '' });
-  try {
-    const u = urls(id);
-    const jr = await fetch(u.json); if (!jr.ok) throw new Error(`HTTP ${jr.status}`);
-    const jsonBody = await jr.arrayBuffer();
-    const br = await fetch(u.bin); if (!br.ok || !br.body) throw new Error(`HTTP ${br.status}`);
-    const total = Number(br.headers.get('content-length')) || 0;
-    const reader = br.body.getReader(); const chunks: BlobPart[] = []; let got = 0;
-    for (;;) {
-      const { done, value } = await reader.read(); if (done) break;
-      chunks.push(value); got += value.length;
-      set({ progress: total ? got / total : -1 });
-    }
-    const c = await caches.open(CACHE);
-    await c.put(u.json, new Response(jsonBody, { headers: { 'content-type': 'application/json' } }));
-    await c.put(u.bin, new Response(new Blob(chunks), { headers: { 'content-type': 'application/octet-stream' } }));
-    set({ ready: { ...state.ready, [id]: true }, progress: null, pack: state.voice === id ? await loadPack(id) : state.pack });
-  } catch (e) {
-    set({ progress: null, error: (e as Error).message || 'failed' });
-  }
-}
-
-export async function removeVoice(id: VoiceId) {
-  if (!hasCache()) return;
-  const c = await caches.open(CACHE), u = urls(id);
-  await Promise.all([c.delete(u.json), c.delete(u.bin)]);
-  set({ ready: { ...state.ready, [id]: false }, pack: state.voice === id ? null : state.pack });
-}
 
 // ── So âm ──
 const TONES: Record<string, string> = {
